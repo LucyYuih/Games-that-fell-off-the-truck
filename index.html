@@ -417,7 +417,8 @@ function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
 function parseGamesTxt(txt){
   const lines = txt.split(/\r?\n/);
   let currentCategory = null;
-  const items = [], block = [];
+  const items = [];
+  let block = [];
   function flushBlock(){ if(block.length===0) return; const item=parseBlock(block,currentCategory); if(item) items.push(item); block=[]; }
   for(let i=0;i<lines.length;i++){
     const raw = lines[i];
