@@ -129,7 +129,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
     <main>
       <section id="grid" class="grid" aria-live="polite"></section>
       <section id="requestSection" style="display: none;">
-        <!-- ... requests igual ao original ... -->
+        <!-- requests igual ao anterior -->
         <form class="request-form" id="requestForm" novalidate>
           <h2>Request a Game</h2>
           <p style="margin-bottom: 16px; color: var(--muted);">Submit your request for a new game to be added to the collection (requires GitHub login).</p>
@@ -222,7 +222,6 @@ const FILES = {
   android: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/gamesandroid.txt'
 };
 let currentDevice = 'pc';
-
 function escapeHtml(s){
   return String(s).replace(/[&<>"'`]/g, function(m){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
@@ -258,7 +257,7 @@ function parseBlock(blockLines, currentCategory){
   if(blockLines.length === 0) return null;
   const lines = blockLines.filter(l => l && l.trim() !== '');
   const title = lines[0].trim();
-  let downloadUrl = null, pageUrl = null;
+  let downloadUrl = null, steamUrl = null, playUrl = null;
   let gotOriginal = false;
   for(let i=1;i<lines.length;i++){
     const ln = lines[i].trim();
@@ -267,7 +266,11 @@ function parseBlock(blockLines, currentCategory){
     if(urls){
       for(const u of urls){
         if(gotOriginal){
-          pageUrl = u;
+          if(u.includes('play.google.com/store/apps')){
+            playUrl = u;
+          } else if(u.includes('steampowered.com/app/')){
+            steamUrl = u;
+          }
         }else if(!downloadUrl){
           downloadUrl = u;
         }
@@ -275,7 +278,17 @@ function parseBlock(blockLines, currentCategory){
     }
   }
   let category = currentCategory || 'Indie';
-  return { title, category, downloadUrl, pageUrl, rawLines: lines };
+  return { title, category, downloadUrl, steamUrl, playUrl, rawLines: lines };
+}
+function getPlayThumb(playUrl){
+  const pkgMatch = playUrl.match(/id=([a-zA-Z0-9._-]+)/);
+  if(pkgMatch){
+    const pkg = pkgMatch[1];
+    // Usa thumbnail oficial do app (alta qualidade)
+    return `https://play-lh.googleusercontent.com/a-/AOh14Gj_${pkg}=w512-h512-rw`;
+  }
+  // fallback para favicon
+  return 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
 }
 function makeCard(item){
   const el = document.createElement('div');
@@ -285,23 +298,27 @@ function makeCard(item){
   // THUMB
   const thumb = document.createElement('div');
   thumb.className='thumb';
-  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
-    const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
+  let thumbSet = false;
+  // Prioridade: PlayStore, Steam
+  if(currentDevice==='android' && item.playUrl){
+    const img = document.createElement('img');
+    img.src = getPlayThumb(item.playUrl);
+    img.alt = '';
+    thumb.appendChild(img);
+    thumbSet = true;
+  }
+  if(item.steamUrl){
+    const appIdMatch = item.steamUrl.match(/\/app\/(\d+)/);
     if(appIdMatch){
       const appId = appIdMatch[1];
       const img = document.createElement('img');
       img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
       img.alt = '';
       thumb.appendChild(img);
-    }else{
-      thumb.textContent = 'No Image';
+      thumbSet = true;
     }
-  }else if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
-    const img = document.createElement('img');
-    img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
-    img.alt = '';
-    thumb.appendChild(img);
-  }else{
+  }
+  if(!thumbSet){
     thumb.textContent = 'No Image';
   }
   // TITULO
@@ -319,19 +336,21 @@ function makeCard(item){
     aDl.textContent='Download';
     buttons.appendChild(aDl);
   }
-  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+  // Steam Page (disponível nas duas abas)
+  if(item.steamUrl){
     const aSteam = document.createElement('a');
     aSteam.className='btn ghost';
-    aSteam.href=item.pageUrl;
+    aSteam.href=item.steamUrl;
     aSteam.target='_blank';
     aSteam.rel='noopener';
     aSteam.textContent='Steam Page';
     buttons.appendChild(aSteam);
   }
-  if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+  // Google Play Page (disponível nas duas abas)
+  if(item.playUrl){
     const aPlay = document.createElement('a');
     aPlay.className='btn ghost';
-    aPlay.href=item.pageUrl;
+    aPlay.href=item.playUrl;
     aPlay.target='_blank';
     aPlay.rel='noopener';
     aPlay.textContent='Google Play Page';
@@ -385,7 +404,8 @@ function loadGames(device){
     .then(txt=>{renderGrid(parseGamesTxt(txt));});
 }
 
-/* ---------------- REQUESTS LOGIC ------------------ */
+/* ---------------- REQUESTS LOGIC igual ao anterior ------------------ */
+// ... requests logic igual ao anterior (mantido) ...
 const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
 const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
 let githubToken = null;
