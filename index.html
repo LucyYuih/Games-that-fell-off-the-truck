@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -63,7 +63,6 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
 .btn.small{padding:6px 8px;font-size:12px;border-radius:8px}
 .extra-buttons{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%}
 .card .buttons { display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%; }
-/* requests */
 .request-form { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03)); border-radius: var(--radius); padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;}
 .form-group { margin-bottom: 16px; }
 .form-control { width:100%; padding:10px 12px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; color:#eaf2ff; }
@@ -78,6 +77,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
 .status-closed { background: rgba(231, 76, 60, 0.12); color: #e74c3c; border:1px solid rgba(231,76,60,0.08) }
 .request-link { color: #7c5cf7; text-decoration:none; font-weight:700 }
 .footer{color:var(--muted);font-size:12px;margin-top:14px;text-align:center}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -129,7 +129,6 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
     <main>
       <section id="grid" class="grid" aria-live="polite"></section>
       <section id="requestSection" style="display: none;">
-        <!-- requests igual ao anterior -->
         <form class="request-form" id="requestForm" novalidate>
           <h2>Request a Game</h2>
           <p style="margin-bottom: 16px; color: var(--muted);">Submit your request for a new game to be added to the collection (requires GitHub login).</p>
@@ -222,12 +221,20 @@ const FILES = {
   android: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/gamesandroid.txt'
 };
 let currentDevice = 'pc';
+
 function escapeHtml(s){
   return String(s).replace(/[&<>"'`]/g, function(m){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
   });
 }
 function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+
+/*
+  Parser melhorado:
+  - Suporta linha "Image: https://..." (case-insensitive)
+  - Se encontrar URLs, coleta; se a última URL tiver extensão de imagem, usa como imageUrl
+  - Para Android, se houver imageUrl, será usada como thumbnail
+*/
 function parseGamesTxt(txt){
   const lines = txt.split(/\r?\n/);
   let currentCategory = null;
@@ -253,78 +260,114 @@ function parseGamesTxt(txt){
   flushBlock();
   return items;
 }
+
 function parseBlock(blockLines, currentCategory){
   if(blockLines.length === 0) return null;
   const lines = blockLines.filter(l => l && l.trim() !== '');
   const title = lines[0].trim();
-  let downloadUrl = null, steamUrl = null, playUrl = null;
+  let downloadUrl = null, pageUrl = null, imageUrl = null;
   let gotOriginal = false;
+  const urls = [];
+  // helper to extract first url from string
+  const extractUrls = (str) => {
+    const m = str.match(/https?:\/\/[^\s)]+/g);
+    return m || [];
+  };
   for(let i=1;i<lines.length;i++){
     const ln = lines[i].trim();
+    // suportar linha "Image: <url>"
+    const imageLineMatch = ln.match(/^\s*image\s*[:\-]?\s*(https?:\/\/[^\s)]+)\s*$/i);
+    if(imageLineMatch){
+      imageUrl = imageLineMatch[1];
+      continue;
+    }
     if(ln.toLowerCase() === 'original'){ gotOriginal = true; continue; }
-    const urls = ln.match(/https?:\/\/[^\s]+/g);
-    if(urls){
-      for(const u of urls){
-        if(gotOriginal){
-          if(u.includes('play.google.com/store/apps')){
-            playUrl = u;
-          } else if(u.includes('steampowered.com/app/')){
-            steamUrl = u;
-          }
-        }else if(!downloadUrl){
-          downloadUrl = u;
-        }
-      }
+    const found = extractUrls(ln);
+    if(found.length){
+      for(const u of found) urls.push(u);
     }
   }
-  let category = currentCategory || 'Indie';
-  return { title, category, downloadUrl, steamUrl, playUrl, rawLines: lines };
-}
-function getPlayThumb(playUrl){
-  const pkgMatch = playUrl.match(/id=([a-zA-Z0-9._-]+)/);
-  if(pkgMatch){
-    const pkg = pkgMatch[1];
-    // Usa thumbnail oficial do app (alta qualidade)
-    return `https://play-lh.googleusercontent.com/a-/AOh14Gj_${pkg}=w512-h512-rw`;
+  // assign downloadUrl / pageUrl / imageUrl by heuristics:
+  if(urls.length > 0){
+    // se houver 1 URL => downloadUrl
+    if(urls.length === 1){
+      downloadUrl = urls[0];
+    }else if(urls.length >= 2){
+      // primeiro checkbox: primeiro = download, segundo = page
+      downloadUrl = urls[0];
+      pageUrl = urls[1];
+      // se houver terceiro, considera como image por convenção do usuário
+      if(urls.length >= 3){
+        imageUrl = imageUrl || urls[2];
+      }
+    }
+    // se não definiu pageUrl e original marqueou, tenta usar a última url como pageUrl
+    if(!pageUrl && gotOriginal && urls.length >= 2){
+      pageUrl = urls[1];
+    }
+    // se ainda não tem imageUrl, e a última url tem extensão de imagem, usa
+    if(!imageUrl){
+      const last = urls[urls.length - 1];
+      if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
+    }
   }
-  // fallback para favicon
-  return 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
+
+  // se só teve uma url e ela é de playstore (ou imagem), tenta ajustar
+  if(!pageUrl && downloadUrl && /play\.google\.com\/store\/apps/i.test(downloadUrl)){
+    pageUrl = downloadUrl;
+    downloadUrl = null;
+  }
+
+  let category = currentCategory || 'Indie';
+  return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines };
 }
+
 function makeCard(item){
   const el = document.createElement('div');
   el.className='card';
   el.dataset.title=item.title.toLowerCase();
   el.dataset.category=item.category;
-  // THUMB
   const thumb = document.createElement('div');
   thumb.className='thumb';
-  let thumbSet = false;
-  // Prioridade: PlayStore, Steam
-  if(currentDevice==='android' && item.playUrl){
-    const img = document.createElement('img');
-    img.src = getPlayThumb(item.playUrl);
-    img.alt = '';
-    thumb.appendChild(img);
-    thumbSet = true;
-  }
-  if(item.steamUrl){
-    const appIdMatch = item.steamUrl.match(/\/app\/(\d+)/);
+
+  // PC: steam header (mantive sua lógica)
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+    const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
     if(appIdMatch){
       const appId = appIdMatch[1];
       const img = document.createElement('img');
       img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
       img.alt = '';
       thumb.appendChild(img);
-      thumbSet = true;
+    }else{
+      thumb.textContent = 'No Image';
     }
   }
-  if(!thumbSet){
+  // ANDROID: usar imageUrl se existir; senão tentar ícone padrão do Play
+  else if(currentDevice==='android'){
+    if(item.imageUrl){
+      const img = document.createElement('img');
+      img.src = item.imageUrl;
+      img.alt = '';
+      // tentar evitar mixed content: se a página for carregada via https e a image for http, o navegador pode bloquear.
+      // assumimos que o usuário colocará urls https. Não forçamos mudança.
+      thumb.appendChild(img);
+    }else if(item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+      // mantemos o ícone padrão do play como fallback
+      const img = document.createElement('img');
+      img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
+      img.alt = '';
+      thumb.appendChild(img);
+    }else{
+      thumb.textContent = 'No Image';
+    }
+  }
+  else{
     thumb.textContent = 'No Image';
   }
-  // TITULO
+
   const titleDiv = document.createElement('div');
   titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(item.category)}</div>`;
-  // BOTOES
   const buttons = document.createElement('div');
   buttons.className='buttons';
   if(item.downloadUrl){
@@ -336,21 +379,19 @@ function makeCard(item){
     aDl.textContent='Download';
     buttons.appendChild(aDl);
   }
-  // Steam Page (disponível nas duas abas)
-  if(item.steamUrl){
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
     const aSteam = document.createElement('a');
     aSteam.className='btn ghost';
-    aSteam.href=item.steamUrl;
+    aSteam.href=item.pageUrl;
     aSteam.target='_blank';
     aSteam.rel='noopener';
     aSteam.textContent='Steam Page';
     buttons.appendChild(aSteam);
   }
-  // Google Play Page (disponível nas duas abas)
-  if(item.playUrl){
+  if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
     const aPlay = document.createElement('a');
     aPlay.className='btn ghost';
-    aPlay.href=item.playUrl;
+    aPlay.href=item.pageUrl;
     aPlay.target='_blank';
     aPlay.rel='noopener';
     aPlay.textContent='Google Play Page';
@@ -361,6 +402,7 @@ function makeCard(item){
   el.appendChild(buttons);
   return el;
 }
+
 function renderGrid(items){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
@@ -371,14 +413,17 @@ function renderGrid(items){
   grid.appendChild(frag);
   filterAndShow();
 }
-function filterAndShow(){
+function filterAndShow() {
   const query = (document.getElementById('search').value || '').toLowerCase();
+  // Pega tab ativa
   const catBtn = document.querySelector('.tab.active');
-  const cat = catBtn ? catBtn.dataset.cat : 'all';
+  let cat = catBtn ? catBtn.dataset.cat : 'all';
+  cat = cat.toLowerCase();
   const grid = document.getElementById('grid');
   Array.from(grid.children).forEach(card => {
+    const cardCat = (card.dataset.category || '').toLowerCase();
     const matchTitle = card.dataset.title.includes(query);
-    const matchCat = (cat === 'all') || (card.dataset.category === cat);
+    const matchCat = (cat === 'all') || (cardCat === cat);
     card.style.display = (matchTitle && matchCat) ? '' : 'none';
   });
 }
@@ -401,11 +446,13 @@ function applyColumns(cols){
 function loadGames(device){
   fetch(FILES[device] + '?cacheBust=' + Date.now())
     .then(res=>res.text())
-    .then(txt=>{renderGrid(parseGamesTxt(txt));});
+    .then(txt=>{renderGrid(parseGamesTxt(txt));})
+    .catch(e=>{
+      document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Erro ao carregar lista: ${escapeHtml(e.message)}</div>`;
+    });
 }
 
-/* ---------------- REQUESTS LOGIC igual ao anterior ------------------ */
-// ... requests logic igual ao anterior (mantido) ...
+// REQUESTS CODE (igual ao original, mantido!)
 const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
 const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
 let githubToken = null;
