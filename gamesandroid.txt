@@ -11,6 +11,13 @@ Original
 https://store.steampowered.com/app/367520/Hollow_Knight/
 Image
 https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg
+
+Slime Rancher
+kwwsv://udqrc.jj/iloh/V0AeGHT6
+Original
+https://store.steampowered.com/app/433340/Slime_Rancher/
+Image
+https://cdn.cloudflare.steamstatic.com/steam/apps/433340/header.jpg
 ---
 Geometry Dash
 kwwsv://udqrc.jj/iloh/bR3gBWdC
