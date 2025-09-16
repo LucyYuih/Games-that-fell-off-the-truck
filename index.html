@@ -260,7 +260,6 @@ function caesarDecodeLettersDigits(text, shift) {
 // =====================================================================================================
 
 // ========== URL STATE MANAGEMENT ==========
-// Agora salvando/restaurando device na URL também
 function getActiveTab() {
   const active = document.querySelector('.tab.active');
   return (active && active.dataset && active.dataset.cat) ? active.dataset.cat : 'all';
@@ -272,7 +271,6 @@ function buildStatePath(tab, sort, device) {
   device = (device || getActiveDevice() || 'pc').toLowerCase();
   tab = (tab || 'all').toString().toLowerCase();
   sort = (sort || 'default').toString().toLowerCase();
-  // /device/tab/sort
   if (tab === 'requests') {
     return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}`;
   }
@@ -286,7 +284,6 @@ function parseStateFromHash(hash) {
   const cleaned = hash.replace(/^#(!)?/, '');
   if (!cleaned) return null;
   const parts = cleaned.replace(/^\/+|\/+$/g,'').split('/');
-  // [device, tab, sort]
   const device = (parts[0] || 'pc').toLowerCase();
   const tab = (parts[1] || 'all').toLowerCase();
   const sort = (parts[2] || 'default').toLowerCase();
@@ -298,7 +295,6 @@ function parseStateFromPathname(path) {
   const clean = p.replace(/^\/+|\/+$/g,'');
   if (!clean) return { device: 'pc', tab: 'all', sort: 'default' };
   const parts = clean.split('/');
-  // [device, tab, sort]
   const device = (parts[0] || 'pc').toLowerCase();
   const tab = (parts[1] || 'all').toLowerCase();
   const sort = (parts[2] || 'default').toLowerCase();
@@ -307,14 +303,12 @@ function parseStateFromPathname(path) {
       return { device, tab, sort };
     }
   }
-  // fallback: support legacy (no device present)
   if(['requests','all','indie','aaa','nsfw'].includes(device)){
     return { device:'pc', tab:device, sort:tab };
   }
   return null;
 }
 function readStateFromLocation() {
-  // prefer hash (explicit)
   const fromHash = parseStateFromHash(location.hash);
   if (fromHash) return fromHash;
   const fromPath = parseStateFromPathname(location.pathname);
@@ -347,23 +341,18 @@ function updateUrlState(tab, sort, device) {
       }
     }
   } catch (e) {
-    // ignore
     console.warn('updateUrlState failed', e);
   }
 }
 function restoreStateFromLocation(){
   const state = readStateFromLocation();
-  // Switch device if needed
   if (state.device && (state.device === 'pc' || state.device === 'android') && state.device !== currentDevice) {
     currentDevice = state.device;
-    // Visual feedback device buttons
     document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
     document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
     loadGames(currentDevice);
   }
-  // Tabs
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-  // Now: always lowercase compare and set active, works for AAA/Indie/NSFW
   let foundTab = null;
   document.querySelectorAll('.tab').forEach(tabEl=>{
     if(tabEl.dataset.cat && tabEl.dataset.cat.toLowerCase() === state.tab) {
@@ -372,7 +361,6 @@ function restoreStateFromLocation(){
   });
   if(foundTab) foundTab.classList.add('active');
   else document.querySelector('.tab[data-cat="all"]').classList.add('active');
-  // Requests section
   if(state.tab === 'requests'){
     document.getElementById('grid').style.display = 'none';
     document.getElementById('requestSection').style.display = 'block';
@@ -380,7 +368,6 @@ function restoreStateFromLocation(){
     document.getElementById('grid').style.display = 'grid';
     document.getElementById('requestSection').style.display = 'none';
   }
-  // Sort
   if(document.getElementById('sortSelect')){
     document.getElementById('sortSelect').value = state.sort || 'default';
     applySortAndReorder();
@@ -389,7 +376,7 @@ function restoreStateFromLocation(){
 }
 
 // ========================================================================
-// RESTO DO CÓDIGO ORIGINAL (mantido, apenas adaptado onde necessário)
+// RESTO DO CÓDIGO ORIGINAL (mantido, ajustando detector de URLs)
 // ========================================================================
 function escapeHtml(s){
   return String(s).replace(/[&<>"'`]/g, function(m){
@@ -431,8 +418,8 @@ function parseGamesTxt(txt){
       }
       return null;
     })();
-    const mightBeTitle = !/https?:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
-    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine);
+    const mightBeTitle = !/https?:\/\//i.test(line) && !/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
+    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine) || nextLine && /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/i.test(nextLine);
     if(mightBeTitle && nextIsUrl && block.length>0){
       flushBlock();
     }
@@ -448,8 +435,10 @@ function parseBlock(blockLines, currentCategory){
   let downloadUrl = null, pageUrl = null, imageUrl = null;
   let gotOriginal = false;
   const urls = [];
+  // ======= ALTERAÇÃO IMPORTANTE: agora capturamos QUALQUER esquema do tipo `xxx://...` (inclui kwwsv:// e outros obfuscados) =======
   const extractUrls = (str) => {
-    const m = str.match(/https?:\/\/[^\s)]+/g);
+    // aceita esquemas com letras, dígitos e sinais + . - (ex.: https://, kwwsv://, eqqmp://, ftp://, etc.)
+    const m = str.match(/[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/g);
     return m || [];
   };
   for(let i=1;i<lines.length;i++){
@@ -463,29 +452,24 @@ function parseBlock(blockLines, currentCategory){
     const found = extractUrls(ln);
     if(found.length){
       for(const u of found) urls.push(u);
-    }
-  }
-  if(urls.length > 0){
-    if(urls.length === 1){
-      downloadUrl = urls[0];
-    }else if(urls.length >= 2){
-      downloadUrl = urls[0];
-      pageUrl = urls[1];
-      if(urls.length >= 3){
-        imageUrl = imageUrl || urls[2];
+    } else {
+      // se nenhuma URL com esquema for encontrada, tentar capturar casos onde o link não tem esquema mas parece domínio (ex: example.com/abc)
+      const domainLike = ln.match(/([^\s]+\.[a-z]{2,}(\/[^\s]*)?)/i);
+      if(domainLike && domainLike[1]) {
+        // prefixa com http:// para manter como URL detectada (não altera string original deixada para decodificação)
+        urls.push(domainLike[1]);
       }
     }
-    if(!pageUrl && gotOriginal && urls.length >= 2){
-      pageUrl = urls[1];
-    }
+  }
+  // ======= Garantir que o PRIMEIRO link/string após o nome do jogo é sempre usado como downloadUrl =======
+  if(urls.length > 0){
+    downloadUrl = urls[0];
+    if(urls.length >= 2) pageUrl = urls[1];
+    if(urls.length >= 3) imageUrl = imageUrl || urls[2];
     if(!imageUrl){
       const last = urls[urls.length - 1];
       if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
     }
-  }
-  if(!pageUrl && downloadUrl && /play\.google\.com\/store\/apps/i.test(downloadUrl)){
-    pageUrl = downloadUrl;
-    downloadUrl = null;
   }
   let category = currentCategory || 'Indie';
   return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines };
@@ -534,15 +518,19 @@ function makeCard(item){
   if(item.downloadUrl){
     const aDl=document.createElement('a');
     aDl.className='btn primary';
-    // ======= Alterado: decodificar o link com cifra de César (shift 3) apenas para o botão Download =======
+    // ======= Decodifica o link com cifra de César (shift 3) apenas para o botão Download =======
     try {
-      // decodifica letras e dígitos com shift 3 (assumindo que o link foi codificado com shift +3)
-      aDl.href = caesarDecodeLettersDigits(item.downloadUrl, 3);
+      // se downloadUrl foi detectado sem esquema (ex: example.com/...), não queremos quebrar a decodificação;
+      // aplicar decodificação e, se a string resultante não tem esquema, prefixar com http:// para que <a> funcione.
+      let decoded = caesarDecodeLettersDigits(item.downloadUrl, 3);
+      // se o decoded resultante ainda estiver sem '://' e parecer domínio, prefixa http://
+      if(!/[A-Za-z][A-Za-z0-9+.\-]*:\/\//.test(decoded) && /^[^\s]+\.[a-z]{2,}/i.test(decoded)) {
+        decoded = 'http://' + decoded;
+      }
+      aDl.href = decoded;
     } catch (e) {
-      // fallback se algo der errado: usa o link original sem decodificar
       aDl.href = item.downloadUrl;
     }
-    // ===================================================================================================
     aDl.target='_blank';
     aDl.rel='noopener';
     aDl.textContent='Download';
@@ -872,11 +860,8 @@ document.addEventListener('DOMContentLoaded', ()=> {
     try{ githubUser = JSON.parse(savedUser); }catch(e){}
     updateLoginUI();
   }
-  // --- RESTAURAR POSIÇÃO DA URL NA CARGA DA PÁGINA ---
-  // carrega device/tab/sort do url
   const urlState = readStateFromLocation();
   if(urlState.device && (urlState.device==='pc'||urlState.device==='android')) currentDevice = urlState.device;
-  // Visual feedback device buttons
   document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
   document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
   loadGames(currentDevice);
