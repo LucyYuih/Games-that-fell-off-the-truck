@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Games that fell off the truck</title>
+<style>
+:root{
+  --bg:#0b0f14;
+  --muted:#97a0ac;
+  --accent:#7c5cf7;
+  --glass: rgba(255,255,255,0.03);
+  --radius:14px;
+  --gap:18px;
+  --cols: 3;
+  --card-scale: 1;
+  --title-size: calc(15px * var(--card-scale));
+  --meta-size: calc(12px * var(--card-scale));
+  --btn-font: calc(13px * var(--card-scale));
+  --btn-padding-vert: calc(8px * var(--card-scale));
+  --btn-padding-horiz: calc(10px * var(--card-scale));
+  --thumb-aspect: 16 / 9;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:linear-gradient(180deg,#07090c 0%, #0b0f14 100%);color:#e6eef8;font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto,Arial;overflow-x:hidden;}
+.app{max-width:1200px;margin:28px auto;padding:20px;}
+header{display:flex;gap:16px;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;}
+.brand{display:flex;gap:12px;align-items:center;}
+.square{width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--accent),#4bb6ff);font-weight:800;color:#06111a;font-size:22px;font-family:sans-serif;}
+.titleWrap{display:flex;flex-direction:column;}
+.titleWrap h1{font-size:18px;margin:0}
+.titleWrap .lead{margin:0;color:var(--muted);font-size:13px}
+.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.search{background:var(--glass);padding:10px 12px;border-radius:999px;display:flex;gap:8px;align-items:center;min-width:160px;max-width:420px;}
+.search input{background:transparent;border:0;color:inherit;outline:none;font-size:14px;width:100%;min-width:0;}
+.sort-wrap{display:flex;align-items:center;gap:8px;margin-left:8px}
+.sort-select{background:var(--glass);border:1px solid rgba(255,255,255,0.04);padding:8px;border-radius:10px;color:inherit;font-weight:600}
+.options-container { position: relative; margin-left: auto; }
+.options-menu { display: none; position: absolute; top: 110%; right: 0; background: var(--glass); backdrop-filter: blur(8px); border-radius: 10px; padding: 12px; min-width: 160px; box-shadow: 0 6px 20px rgba(0,0,0,0.3);}
+.options-menu.show { display: flex; align-items: center; gap: 12px; }
+.options-menu input[type=range]{ -webkit-appearance: none; appearance: none; width:140px; height:8px; background: linear-gradient(90deg,#2b3340,#111418); border-radius:6px; outline:none; }
+.options-menu input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px;height:20px;border-radius:50%;background:linear-gradient(90deg,var(--accent),#4bb6ff);box-shadow:0 6px 18px rgba(124,92,247,0.18); }
+.options-menu input[type=range]::-moz-range-thumb{ width:20px;height:20px;border-radius:50%;background:linear-gradient(90deg,var(--accent),#4bb6ff);border:0; }
+.cols-count{ background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:6px 10px; border-radius:8px; font-weight:800; color:#eaf2ff; min-width:38px; text-align:center; font-size:13px;}
+.device-filters{display:flex;gap:12px;margin-bottom:10px;}
+.device-btn{padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.08);background:var(--glass);color:var(--muted);}
+.device-btn.active{background:linear-gradient(90deg,#4bb6ff,#7c5cf7);color:#06111a;border:0;}
+.tabs{display:flex;gap:8px;padding:12px 0;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
+.tab-group{display:flex;gap:8px;flex:1;align-items:center;flex-wrap:wrap;}
+.tab{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:12px;color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;}
+.tab.active{background:linear-gradient(90deg, rgba(124,92,247,0.12), rgba(75,182,255,0.06));border-color:transparent;color:#e9f0ff;box-shadow:0 6px 20px rgba(16,18,22,0.4)}
+.tab.requests-tab{margin-left:auto;background:linear-gradient(90deg,#4bb6ff,#7c5cf7);color:#06111a;border:0;box-shadow:0 8px 30px rgba(75,182,255,0.12);}
+.grid{display:grid;gap:var(--gap);grid-template-columns: repeat(var(--cols), minmax(0, 1fr));align-items:start;overflow:auto;padding-bottom:6px;transition:all 0.18s ease;width:100%;}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02));padding:calc(12px * var(--card-scale));border-radius:var(--radius);display:flex;flex-direction:column;gap:calc(10px * var(--card-scale));border:1px solid rgba(255,255,255,0.03);transition:transform 0.18s ease;}
+.thumb{border-radius:10px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:linear-gradient(135deg,#07101a,#0b1420);box-shadow:inset 0 -20px 40px rgba(0,0,0,0.35);aspect-ratio: var(--thumb-aspect);width:100%;min-height:60px;}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;transition: opacity 0.25s ease;}
+.card .title{font-size:var(--title-size);margin:0;color:#eaf2ff;font-weight:700;line-height:1.15}
+.card .meta{font-size:var(--meta-size);color:var(--muted);display:block;margin-top:-2px}
+.btn{flex:0 0 auto;padding:8px 10px;border-radius:10px;border:0;background:transparent;color:#cfe3ff;font-weight:700;font-size:13px;cursor:pointer;border:1px solid rgba(255,255,255,0.04);text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:32px;}
+.card .btn{flex:1 1 0;padding: var(--btn-padding-vert) var(--btn-padding-horiz);font-size: var(--btn-font);min-height: calc(32px * var(--card-scale));min-width: 0;}
+.btn.primary{background:linear-gradient(90deg,var(--accent),#4bb6ff);color:#06111a;box-shadow:0 8px 30px rgba(124,92,247,0.12);border:0}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.03)}
+.btn.small{padding:6px 8px;font-size:12px;border-radius:8px}
+.extra-buttons{display:flex;gap:6px;flex-wrap:wrap;flex:1 1 100%}
+.card .buttons { display:flex; gap:8px; align-items:center; flex-wrap:wrap; width:100%; }
+.request-form { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.03)); border-radius: var(--radius); padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 24px;}
+.form-group { margin-bottom: 16px; }
+.form-control { width:100%; padding:10px 12px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; color:#eaf2ff; }
+.requests-grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.request-card { background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); padding: 16px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.03); position: relative;}
+.request-title{font-size:16px;margin:8px 0;font-weight:700;color:#eaf2ff"}
+.request-meta { color: var(--muted); font-size:13px; margin-bottom: 10px; display:flex; gap:12px; align-items:center; }
+.request-category { display:inline-block; padding:4px 10px; background: rgba(124,92,247,0.1); border-radius:6px; color:#c6b3ff; font-weight:700; font-size:13px;}
+.request-body{font-size:14px;color:#d0d8e3;line-height:1.4;margin-bottom:8px}
+.request-status { position:absolute; top:16px; right:16px; font-size:11px; padding:6px 8px; border-radius:6px; font-weight:700; }
+.status-open { background: rgba(46, 204, 113, 0.12); color: #2ecc71; border:1px solid rgba(46,204,113,0.08) }
+.status-closed { background: rgba(231, 76, 60, 0.12); color: #e74c3c; border:1px solid rgba(231,76,60,0.08) }
+.request-link { color: #7c5cf7; text-decoration:none; font-weight:700 }
+.footer{color:var(--muted);font-size:12px;margin-top:14px;text-align:center}
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="square">🎮</div>
+        <div class="titleWrap">
+          <h1>Games that fell off the truck</h1>
+          <div class="lead">Games rescued from the wild</div>
+        </div>
+      </div>
+      <div class="controls">
+        <div style="display:flex;align-items:center">
+          <div class="search" title="Search by name">
+            🔎 <input id="search" placeholder="Search by name..." />
+          </div>
+          <div class="sort-wrap">
+            <label for="sortSelect" style="font-size:13px;color: var(--muted)">Sort:</label>
+            <select id="sortSelect" class="sort-select" title="Sort games">
+              <option value="default">Default</option>
+              <option value="alpha">Alphabetical</option>
+              <option value="recent">Most Recent Added</option>
+            </select>
+          </div>
+        </div>
+        <div class="options-container">
+          <button id="optionsBtn" class="btn ghost" type="button">⚙ Options</button>
+          <div id="optionsMenu" class="options-menu" aria-hidden="true">
+            <input type="range" id="zoomSlider" min="1" max="8" step="1" />
+            <div class="cols-count" id="colsCount">3</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="device-filters" id="deviceFilters">
+      <button class="device-btn active" data-device="pc" id="btnPC">PC</button>
+      <button class="device-btn" data-device="android" id="btnAndroid">Android</button>
+    </div>
+    <nav class="tabs" id="tabs">
+      <div class="tab-group" id="tabGroup">
+        <button class="tab active" data-cat="all" type="button">All</button>
+        <button class="tab" data-cat="Indie" type="button">Indie</button>
+        <button class="tab" data-cat="AAA" type="button">AAA</button>
+        <button class="tab" data-cat="NSFW" type="button">NSFW</button>
+      </div>
+      <button class="tab requests-tab" data-cat="requests" id="requestsTab" type="button">Requests</button>
+    </nav>
+    <main>
+      <section id="grid" class="grid" aria-live="polite"></section>
+      <section id="requestSection" style="display: none;">
+        <form class="request-form" id="requestForm" novalidate>
+          <h2>Request a Game</h2>
+          <p style="margin-bottom: 16px; color: var(--muted);">Submit your request for a new game to be added to the collection (requires GitHub login).</p>
+          <div id="githubLoginSection" style="margin-bottom: 20px; padding: 16px; background: rgba(255,255,255,0.02); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div id="loginForm" style="display: block;">
+              <h3 style="margin: 0 0 12px 0; color: #eaf2ff; font-size: 16px;">GitHub Authentication</h3>
+              <p style="margin: 0 0 16px 0; color: var(--muted); font-size: 14px;">Login with your GitHub Personal Access Token to submit and manage requests</p>
+              <div class="form-group" style="margin-bottom: 12px;">
+                <label for="githubUsername" style="display: block; margin-bottom: 6px; color: #eaf2ff; font-weight: 600; font-size: 13px;">GitHub Username*</label>
+                <input type="text" id="githubUsernameInput" class="form-control" placeholder="your-github-username" required>
+              </div>
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="githubToken" style="display: block; margin-bottom: 6px; color: #eaf2ff; font-weight: 600; font-size: 13px;">Personal Access Token*</label>
+                <input type="password" id="githubTokenInput" class="form-control" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required>
+                <small style="display: block; margin-top: 4px; color: var(--muted); font-size: 12px;">
+                  <a href="https://github.com/settings/tokens" target="_blank" style="color: var(--accent); text-decoration: none;">Create a token</a> with 'repo' and 'user' scopes
+                </small>
+              </div>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="githubLoginBtn" class="btn primary" type="button">Login</button>
+                <div id="loginSpinner" style="display: none;">
+                  <div class="spinner" style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                </div>
+              </div>
+              <div id="loginError" style="display: none; margin-top: 12px; padding: 10px; background: rgba(231, 76, 60, 0.1); border: 1px solid rgba(231, 76, 60, 0.2); border-radius: 6px; color: #e74c3c;"></div>
+            </div>
+            <div id="loginSuccess" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                  <img id="userAvatar" src="" alt="Avatar" style="width: 32px; height: 32px; border-radius: 50%; display: none;">
+                  <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center;" id="defaultAvatar">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="white"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                  </div>
+                  <div>
+                    <p style="margin: 0; color: #2ecc71; font-weight: 700; font-size: 14px;">Logged in as <span id="githubUsername"></span></p>
+                    <p style="margin: 0; color: var(--muted); font-size: 12px;">You can now submit and manage requests</p>
+                  </div>
+                </div>
+                <button id="githubLogoutBtn" class="btn ghost small" type="button">Logout</button>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="requestTitle">Title*</label>
+            <input type="text" id="requestTitle" class="form-control" placeholder="Name of the game, etc." required>
+          </div>
+          <div class="form-group">
+            <label for="requestCategory">Category*</label>
+            <select id="requestCategory" class="form-control" required>
+              <option value="">Select a category</option>
+              <option value="Indie">Indie</option>
+              <option value="AAA">AAA</option>
+              <option value="NSFW">NSFW</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="requestLink">Link*</label>
+            <input type="url" id="requestLink" class="form-control" placeholder="https://store.steampowered.com/app/..." required>
+            <small style="display: block; margin-top: 4px; color: var(--muted);">Where can we find this game?</small>
+          </div>
+          <div class="form-group">
+            <label for="requestDescription">Description</label>
+            <textarea id="requestDescription" class="form-control" rows="4" placeholder="Provide any additional details..."></textarea>
+          </div>
+          <div class="form-actions" style="display:flex;gap:8px;align-items:center;">
+            <button id="submitRequest" class="btn primary" type="button">Submit Request</button>
+            <a href="https://github.com/LucyYuih/Games-that-fell-off-the-truck/issues" target="_blank" class="btn ghost">View All Requests</a>
+          </div>
+        </form>
+        <div class="request-divider" style="height:18px;"></div>
+        <h2>Requests</h2>
+        <div class="request-view-tabs" style="display: flex; gap: 8px; margin: 12px 0;">
+          <button class="request-view-tab active" id="allRequestsViewTab" type="button">All Requests</button>
+          <button class="request-view-tab" id="myRequestsViewTab" style="display: none;" type="button">My Requests</button>
+        </div>
+        <div class="request-tabs" role="tablist" aria-label="Request status tabs" style="margin-bottom:12px;">
+          <button class="request-tab active" id="openRequestsTab" type="button">Open</button>
+          <button class="request-tab" id="closedRequestsTab" type="button">Closed</button>
+        </div>
+        <p id="requestsDescription" style="margin-bottom: 16px; color: var(--muted);">Recent requests from the community.</p>
+        <div class="requests-grid" id="requestsGrid"></div>
+      </section>
+    </main>
+    <div class="footer">@LucyYuih</div>
+  </div>
+<script>
+const FILES = {
+  pc: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/games.txt',
+  android: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/gamesandroid.txt'
+};
+let currentDevice = 'pc';
+
+// ======= Adicionado: função para decodificar cifra de César sobre letras e dígitos (shift = 3) =======
+// Observação: conforme solicitado, apenas letras (A-Z, a-z) e dígitos (0-9) são deslocados.
+// Para decodificar deslocamento 3 (isto assume que o link foi cifrado com shift +3), usamos shift=3 aqui.
+function caesarDecodeLettersDigits(text, shift) {
+  // shift é número inteiro (ex.: 3). Esta função aplica a rotação inversa (subtrai shift).
+  const sLetters = ((shift % 26) + 26) % 26;
+  const sDigits = ((shift % 10) + 10) % 10;
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const code = ch.charCodeAt(0);
+    // lowercase
+    if (code >= 97 && code <= 122) {
+      const base = 97;
+      const dec = (code - base - sLetters + 26) % 26 + base;
+      out += String.fromCharCode(dec);
+    }
+    // uppercase
+    else if (code >= 65 && code <= 90) {
+      const base = 65;
+      const dec = (code - base - sLetters + 26) % 26 + base;
+      out += String.fromCharCode(dec);
+    }
+    // digits
+    else if (code >= 48 && code <= 57) {
+      const base = 48;
+      const dec = (code - base - sDigits + 10) % 10 + base;
+      out += String.fromCharCode(dec);
+    }
+    else {
+      out += ch;
+    }
+  }
+  return out;
+}
+// =====================================================================================================
+
+// ========== URL STATE MANAGEMENT ==========
+function getActiveTab() {
+  const active = document.querySelector('.tab.active');
+  return (active && active.dataset && active.dataset.cat) ? active.dataset.cat : 'all';
+}
+function getActiveDevice() {
+  return currentDevice || "pc";
+}
+function buildStatePath(tab, sort, device) {
+  device = (device || getActiveDevice() || 'pc').toLowerCase();
+  tab = (tab || 'all').toString().toLowerCase();
+  sort = (sort || 'default').toString().toLowerCase();
+  if (tab === 'requests') {
+    return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}`;
+  }
+  if (!sort || sort === 'default') {
+    return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}`;
+  }
+  return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}/${encodeURIComponent(sort)}`;
+}
+function parseStateFromHash(hash) {
+  if (!hash) return null;
+  const cleaned = hash.replace(/^#(!)?/, '');
+  if (!cleaned) return null;
+  const parts = cleaned.replace(/^\/+|\/+$/g,'').split('/');
+  const device = (parts[0] || 'pc').toLowerCase();
+  const tab = (parts[1] || 'all').toLowerCase();
+  const sort = (parts[2] || 'default').toLowerCase();
+  return { device, tab, sort };
+}
+function parseStateFromPathname(path) {
+  if (!path) return null;
+  const p = path.split('?')[0].split('#')[0];
+  const clean = p.replace(/^\/+|\/+$/g,'');
+  if (!clean) return { device: 'pc', tab: 'all', sort: 'default' };
+  const parts = clean.split('/');
+  const device = (parts[0] || 'pc').toLowerCase();
+  const tab = (parts[1] || 'all').toLowerCase();
+  const sort = (parts[2] || 'default').toLowerCase();
+  if (['pc','android'].includes(device)) {
+    if(['requests','all','indie','aaa','nsfw'].includes(tab)) {
+      return { device, tab, sort };
+    }
+  }
+  if(['requests','all','indie','aaa','nsfw'].includes(device)){
+    return { device:'pc', tab:device, sort:tab };
+  }
+  return null;
+}
+function readStateFromLocation() {
+  const fromHash = parseStateFromHash(location.hash);
+  if (fromHash) return fromHash;
+  const fromPath = parseStateFromPathname(location.pathname);
+  if (fromPath) return fromPath;
+  return { device: 'pc', tab: 'all', sort: 'default' };
+}
+function updateUrlState(tab, sort, device) {
+  device = (device || getActiveDevice() || 'pc').toLowerCase();
+  tab = (tab || 'all').toString().toLowerCase();
+  sort = (sort || 'default').toString().toLowerCase();
+  const useHashRouting = (function(){
+    try {
+      if (location.protocol === 'file:') return true;
+      const host = (location.hostname || '').toLowerCase();
+      if (host.includes('github.io')) return true;
+    } catch(e){}
+    return false;
+  })();
+  try {
+    const path = buildStatePath(tab, sort, device);
+    if (useHashRouting) {
+      const hash = '#' + path;
+      if (location.hash !== hash) {
+        history.replaceState(null, '', location.pathname + hash);
+      }
+    } else {
+      const newUrl = path;
+      if (location.pathname !== newUrl || location.search !== '') {
+        history.replaceState(null, '', newUrl + location.search + location.hash);
+      }
+    }
+  } catch (e) {
+    console.warn('updateUrlState failed', e);
+  }
+}
+function restoreStateFromLocation(){
+  const state = readStateFromLocation();
+  if (state.device && (state.device === 'pc' || state.device === 'android') && state.device !== currentDevice) {
+    currentDevice = state.device;
+    document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
+    document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
+    loadGames(currentDevice);
+  }
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  let foundTab = null;
+  document.querySelectorAll('.tab').forEach(tabEl=>{
+    if(tabEl.dataset.cat && tabEl.dataset.cat.toLowerCase() === state.tab) {
+      foundTab = tabEl;
+    }
+  });
+  if(foundTab) foundTab.classList.add('active');
+  else document.querySelector('.tab[data-cat="all"]').classList.add('active');
+  if(state.tab === 'requests'){
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('requestSection').style.display = 'block';
+  }else{
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+  }
+  if(document.getElementById('sortSelect')){
+    document.getElementById('sortSelect').value = state.sort || 'default';
+    applySortAndReorder();
+  }
+  filterAndShow();
+}
+
+// ========================================================================
+// RESTO DO CÓDIGO ORIGINAL (mantido, ajustando detector de URLs)
+// ========================================================================
+function escapeHtml(s){
+  return String(s).replace(/[&<>"'`]/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
+  });
+}
+function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
+function parseGamesTxt(txt){
+  const lines = txt.split(/\r?\n/);
+  let currentCategory = null;
+  const items = [];
+  let block = [];
+  function flushBlock(){
+    if(block.length===0) return;
+    let item = parseBlock(block, currentCategory);
+    if(item) items.push(item);
+    block=[];
+  }
+  for(let i=0;i<lines.length;i++){
+    const raw = lines[i];
+    const line = raw.replace(/\u00A0/g,' ').trim();
+    if(!line){
+      flushBlock();
+      continue;
+    }
+    if(line.startsWith('#')) continue;
+    const lower = line.toLowerCase();
+    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
+      flushBlock();
+      currentCategory = capitalize(lower);
+      continue;
+    }
+    if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
+    if(line === '-') { flushBlock(); continue; }
+    const nextLine = (()=>{
+      for(let j=i+1;j<lines.length;j++){
+        const l = lines[j].replace(/\u00A0/g,' ').trim();
+        if(l) return l;
+      }
+      return null;
+    })();
+    const mightBeTitle = !/https?:\/\//i.test(line) && !/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
+    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine) || nextLine && /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/i.test(nextLine);
+    if(mightBeTitle && nextIsUrl && block.length>0){
+      flushBlock();
+    }
+    block.push(line);
+  }
+  flushBlock();
+  return items;
+}
+function parseBlock(blockLines, currentCategory){
+  if(blockLines.length === 0) return null;
+  const lines = blockLines.filter(l => l && l.trim() !== '');
+  const title = lines[0].trim();
+  let downloadUrl = null, pageUrl = null, imageUrl = null;
+  let gotOriginal = false;
+  const urls = [];
+  // ======= ALTERAÇÃO IMPORTANTE: agora capturamos QUALQUER esquema do tipo `xxx://...` (inclui kwwsv:// e outros obfuscados) =======
+  const extractUrls = (str) => {
+    // aceita esquemas com letras, dígitos e sinais + . - (ex.: https://, kwwsv://, eqqmp://, ftp://, etc.)
+    const m = str.match(/[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/g);
+    return m || [];
+  };
+  for(let i=1;i<lines.length;i++){
+    const ln = lines[i].trim();
+    const imageLineMatch = ln.match(/^\s*image\s*[:\-]?\s*(https?:\/\/[^\s)]+)\s*$/i);
+    if(imageLineMatch){
+      imageUrl = imageLineMatch[1];
+      continue;
+    }
+    if(ln.toLowerCase() === 'original'){ gotOriginal = true; continue; }
+    const found = extractUrls(ln);
+    if(found.length){
+      for(const u of found) urls.push(u);
+    } else {
+      // se nenhuma URL com esquema for encontrada, tentar capturar casos onde o link não tem esquema mas parece domínio (ex: example.com/abc)
+      const domainLike = ln.match(/([^\s]+\.[a-z]{2,}(\/[^\s]*)?)/i);
+      if(domainLike && domainLike[1]) {
+        // prefixa com http:// para manter como URL detectada (não altera string original deixada para decodificação)
+        urls.push(domainLike[1]);
+      }
+    }
+  }
+  // ======= Garantir que o PRIMEIRO link/string após o nome do jogo é sempre usado como downloadUrl =======
+  if(urls.length > 0){
+    downloadUrl = urls[0];
+    if(urls.length >= 2) pageUrl = urls[1];
+    if(urls.length >= 3) imageUrl = imageUrl || urls[2];
+    if(!imageUrl){
+      const last = urls[urls.length - 1];
+      if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
+    }
+  }
+  let category = currentCategory || 'Indie';
+  return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines };
+}
+function makeCard(item){
+  const el = document.createElement('div');
+  el.className='card';
+  el.dataset.title=item.title.toLowerCase();
+  el.dataset.category=item.category;
+  const thumb = document.createElement('div');
+  thumb.className='thumb';
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+    const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
+    if(appIdMatch){
+      const appId = appIdMatch[1];
+      const img = document.createElement('img');
+      img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
+      img.alt = '';
+      thumb.appendChild(img);
+    }else{
+      thumb.textContent = 'No Image';
+    }
+  }
+  else if(currentDevice==='android'){
+    if(item.imageUrl){
+      const img = document.createElement('img');
+      img.src = item.imageUrl;
+      img.alt = '';
+      thumb.appendChild(img);
+    }else if(item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+      const img = document.createElement('img');
+      img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
+      img.alt = '';
+      thumb.appendChild(img);
+    }else{
+      thumb.textContent = 'No Image';
+    }
+  }
+  else{
+    thumb.textContent = 'No Image';
+  }
+  const titleDiv = document.createElement('div');
+  titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(item.category)}</div>`;
+  const buttons = document.createElement('div');
+  buttons.className='buttons';
+  if(item.downloadUrl){
+    const aDl=document.createElement('a');
+    aDl.className='btn primary';
+    // ======= Decodifica o link com cifra de César (shift 3) apenas para o botão Download =======
+    try {
+      // se downloadUrl foi detectado sem esquema (ex: example.com/...), não queremos quebrar a decodificação;
+      // aplicar decodificação e, se a string resultante não tem esquema, prefixar com http:// para que <a> funcione.
+      let decoded = caesarDecodeLettersDigits(item.downloadUrl, 3);
+      // se o decoded resultante ainda estiver sem '://' e parecer domínio, prefixa http://
+      if(!/[A-Za-z][A-Za-z0-9+.\-]*:\/\//.test(decoded) && /^[^\s]+\.[a-z]{2,}/i.test(decoded)) {
+        decoded = 'http://' + decoded;
+      }
+      aDl.href = decoded;
+    } catch (e) {
+      aDl.href = item.downloadUrl;
+    }
+    aDl.target='_blank';
+    aDl.rel='noopener';
+    aDl.textContent='Download';
+    buttons.appendChild(aDl);
+  }
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+    const aSteam = document.createElement('a');
+    aSteam.className='btn ghost';
+    aSteam.href=item.pageUrl;
+    aSteam.target='_blank';
+    aSteam.rel='noopener';
+    aSteam.textContent='Steam Page';
+    buttons.appendChild(aSteam);
+  }
+  if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+    const aPlay = document.createElement('a');
+    aPlay.className='btn ghost';
+    aPlay.href=item.pageUrl;
+    aPlay.target='_blank';
+    aPlay.rel='noopener';
+    aPlay.textContent='Google Play Page';
+    buttons.appendChild(aPlay);
+  }
+  el.appendChild(thumb);
+  el.appendChild(titleDiv);
+  el.appendChild(buttons);
+  return el;
+}
+function renderGrid(items){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  window.currentItems=items;
+  const frag=document.createDocumentFragment();
+  for(const it of items)
+    frag.appendChild(makeCard(it));
+  grid.appendChild(frag);
+  filterAndShow();
+}
+function filterAndShow() {
+  const query = (document.getElementById('search').value || '').toLowerCase();
+  const catBtn = document.querySelector('.tab.active');
+  let cat = catBtn ? catBtn.dataset.cat : 'all';
+  cat = cat.toLowerCase();
+  const grid = document.getElementById('grid');
+  Array.from(grid.children).forEach(card => {
+    const cardCat = (card.dataset.category || '').toLowerCase();
+    const matchTitle = card.dataset.title.includes(query);
+    const matchCat = (cat === 'all') || (cardCat === cat);
+    card.style.display = (matchTitle && matchCat) ? '' : 'none';
+  });
+}
+function applySortAndReorder(){
+  const sort = document.getElementById('sortSelect').value;
+  const grid = document.getElementById('grid');
+  let cards = Array.from(grid.children);
+  if(sort === 'alpha'){
+    cards = cards.sort((a,b)=>a.dataset.title.localeCompare(b.dataset.title));
+  }
+  grid.innerHTML = '';
+  for(const card of cards) grid.appendChild(card);
+  filterAndShow();
+}
+function applyColumns(cols){
+  cols = Math.max(1, Math.min(8, parseInt(cols)));
+  document.documentElement.style.setProperty('--cols', cols);
+  localStorage.setItem('gridColumns', cols);
+}
+function loadGames(device){
+  fetch(FILES[device] + '?cacheBust=' + Date.now())
+    .then(res=>res.text())
+    .then(txt=>{renderGrid(parseGamesTxt(txt));})
+    .catch(e=>{
+      document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Erro ao carregar lista: ${escapeHtml(e.message)}</div>`;
+    });
+}
+// REQUESTS CODE ...
+const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
+const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
+let githubToken = null;
+let githubUser = null;
+function showLoginError(msg){
+  document.getElementById('loginError').textContent = msg;
+  document.getElementById('loginError').style.display = 'block';
+}
+function updateLoginUI(){
+  if(githubUser){
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('loginSuccess').style.display = 'block';
+    document.getElementById('githubUsername').textContent = githubUser.login;
+    if(githubUser.avatar_url){
+      document.getElementById('userAvatar').src = githubUser.avatar_url;
+      document.getElementById('userAvatar').style.display = '';
+      document.getElementById('defaultAvatar').style.display = 'none';
+    }else{
+      document.getElementById('userAvatar').style.display = 'none';
+      document.getElementById('defaultAvatar').style.display = '';
+    }
+    document.getElementById('myRequestsViewTab').style.display = '';
+  }else{
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('loginSuccess').style.display = 'none';
+    document.getElementById('myRequestsViewTab').style.display = 'none';
+  }
+  document.getElementById('loginError').style.display = 'none';
+}
+async function authenticateWithGitHub(username, token){
+  document.getElementById('loginSpinner').style.display = '';
+  document.getElementById('githubLoginBtn').disabled = true;
+  try{
+    const res = await fetch('https://api.github.com/user', {
+      headers: { Authorization: 'token ' + token }
+    });
+    if(!res.ok) throw new Error('Invalid token');
+    githubUser = await res.json();
+    githubToken = token;
+    localStorage.setItem('github_token', token);
+    localStorage.setItem('github_user', JSON.stringify(githubUser));
+    updateLoginUI();
+  }catch(e){
+    showLoginError('GitHub authentication failed: ' + e.message);
+  }
+  document.getElementById('loginSpinner').style.display = 'none';
+  document.getElementById('githubLoginBtn').disabled = false;
+}
+function switchRequestView(view){
+  document.getElementById('allRequestsViewTab').classList.toggle('active', view === 'all');
+  document.getElementById('myRequestsViewTab').classList.toggle('active', view === 'my');
+  loadRequests(view);
+}
+function switchRequestStatus(status){
+  document.getElementById('openRequestsTab').classList.toggle('active', status === 'open');
+  document.getElementById('closedRequestsTab').classList.toggle('active', status === 'closed');
+  loadRequests(null, status);
+}
+async function submitRequest(){
+  if(!githubToken){
+    showLoginError('You must be logged in to submit a request.');
+    return;
+  }
+  const title = document.getElementById('requestTitle').value.trim();
+  const category = document.getElementById('requestCategory').value.trim();
+  const link = document.getElementById('requestLink').value.trim();
+  const description = document.getElementById('requestDescription').value.trim();
+  if(!title || !category || !link){
+    showLoginError('Please fill in all required fields.');
+    return;
+  }
+  const body = `**Category:** ${category}\n**Link:** ${link}\n\n${description}`;
+  document.getElementById('submitRequest').disabled = true;
+  try{
+    const res = await fetch(ISSUES_API, {
+      method: 'POST',
+      headers: {
+        Authorization: 'token ' + githubToken,
+        Accept: 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({ title, body })
+    });
+    if(res.status === 201){
+      document.getElementById('requestForm').reset();
+      loadRequests();
+      alert('Request submitted!');
+    }else{
+      const err = await res.json();
+      showLoginError('Request failed: ' + (err.message || res.status));
+    }
+  }catch(e){
+    showLoginError('Error submitting request: '+e.message);
+  }
+  document.getElementById('submitRequest').disabled = false;
+}
+async function loadRequests(view, status){
+  const grid = document.getElementById('requestsGrid');
+  grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">Loading requests...</div>';
+  let url = ISSUES_API + '?per_page=50&state=all';
+  try{
+    const res = await fetch(url);
+    const issues = await res.json();
+    let filtered = issues;
+    if(status === 'open') filtered = issues.filter(i=>i.state==='open');
+    if(status === 'closed') filtered = issues.filter(i=>i.state==='closed');
+    if(view === 'my' && githubUser) filtered = filtered.filter(i=>i.user.login===githubUser.login);
+    grid.innerHTML = '';
+    for(const issue of filtered){
+      grid.appendChild(makeRequestCard(issue));
+    }
+    if(filtered.length === 0) grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">No requests found.</div>';
+  }catch(e){
+    grid.innerHTML = '<div style="color:#e74c3c;padding:20px;">Error loading requests: '+e.message+'</div>';
+  }
+}
+function makeRequestCard(issue){
+  const el = document.createElement('div');
+  el.className = 'request-card';
+  const statusClass = issue.state === 'open' ? 'status-open' : 'status-closed';
+  el.innerHTML = `
+    <div class="request-title">${escapeHtml(issue.title)}</div>
+    <div class="request-meta">
+      <span class="request-category">${extractCategory(issue.body)}</span>
+      <a class="request-link" href="${extractLink(issue.body)}" target="_blank">Link</a>
+      <span>by <b>${escapeHtml(issue.user.login)}</b></span>
+    </div>
+    <div class="request-body">${escapeHtml(extractDescription(issue.body))}</div>
+    <div class="request-status ${statusClass}">${issue.state.toUpperCase()}</div>
+    <a href="${issue.html_url}" target="_blank" style="color:${issue.state==='open'?'#7c5cf7':'#e74c3c'};font-size:13px;">View on GitHub</a>
+  `;
+  return el;
+}
+function extractCategory(body){
+  const m = body.match(/\*\*Category:\*\*\s*([^\n]+)/);
+  return m ? m[1] : "N/A";
+}
+function extractLink(body){
+  const m = body.match(/\*\*Link:\*\*\s*(https?:\/\/[^\s]+)/);
+  return m ? m[1] : "#";
+}
+function extractDescription(body){
+  return body.replace(/\*\*Category:.*\*\*Link:.*\n*/s,'').trim();
+}
+document.addEventListener('DOMContentLoaded', ()=> {
+  document.getElementById('btnPC').onclick = function(){
+    if(currentDevice==='pc') return;
+    currentDevice='pc';
+    document.getElementById('btnPC').classList.add('active');
+    document.getElementById('btnAndroid').classList.remove('active');
+    loadGames('pc');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.tab[data-cat="all"]').classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'pc');
+  };
+  document.getElementById('btnAndroid').onclick = function(){
+    if(currentDevice==='android') return;
+    currentDevice='android';
+    document.getElementById('btnPC').classList.remove('active');
+    document.getElementById('btnAndroid').classList.add('active');
+    loadGames('android');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.tab[data-cat="all"]').classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'android');
+  };
+  document.getElementById('tabGroup').onclick = function(e){
+    const b = e.target.closest('.tab');
+    if(!b || b.dataset.cat==='requests') return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    filterAndShow();
+    updateUrlState(b.dataset.cat, document.getElementById('sortSelect').value, currentDevice);
+  };
+  document.getElementById('requestsTab').onclick = function(){
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('requestSection').style.display = 'block';
+    loadRequests();
+    updateUrlState('requests','default',currentDevice);
+  };
+  document.getElementById('sortSelect').addEventListener('change', function(){
+    applySortAndReorder();
+    updateUrlState(getActiveTab(), this.value, currentDevice);
+  });
+  document.getElementById('search').addEventListener('input', filterAndShow);
+  const zoomSlider = document.getElementById('zoomSlider');
+  const colsCount = document.getElementById('colsCount');
+  if (zoomSlider) {
+    zoomSlider.addEventListener('input', e => {
+      applyColumns(e.target.value);
+      colsCount.textContent = e.target.value;
+    });
+    const savedCols = parseInt(localStorage.getItem('gridColumns') || getComputedStyle(document.documentElement).getPropertyValue('--cols') || 3, 10);
+    zoomSlider.value = Math.min(8, Math.max(1, savedCols));
+    colsCount.textContent = zoomSlider.value;
+    applyColumns(zoomSlider.value);
+  }
+  const optionsBtn = document.getElementById('optionsBtn');
+  const optionsMenu = document.getElementById('optionsMenu');
+  if (optionsBtn) {
+    optionsBtn.addEventListener('click', ()=> {
+      const isVisible = optionsMenu.classList.contains('show');
+      if (isVisible) {
+        optionsMenu.classList.remove('show');
+        optionsMenu.setAttribute('aria-hidden', 'true');
+      } else {
+        optionsMenu.classList.add('show');
+        optionsMenu.setAttribute('aria-hidden', 'false');
+      }
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (optionsMenu && !optionsMenu.contains(e.target) && !optionsBtn.contains(e.target)) {
+      optionsMenu.classList.remove('show');
+      optionsMenu.setAttribute('aria-hidden', 'true');
+    }
+  });
+  document.getElementById('submitRequest').addEventListener('click', submitRequest);
+  document.getElementById('githubLoginBtn').addEventListener('click', async () => {
+    const username = document.getElementById('githubUsernameInput').value.trim();
+    const token = document.getElementById('githubTokenInput').value.trim();
+    if (!username || !token) {
+      showLoginError('Please enter both username and token');
+      return;
+    }
+    await authenticateWithGitHub(username, token);
+  });
+  document.getElementById('githubLogoutBtn').addEventListener('click', () => {
+    githubToken = null;
+    githubUser = null;
+    localStorage.removeItem('github_token');
+    localStorage.removeItem('github_user');
+    updateLoginUI();
+    document.getElementById('myRequestsViewTab').style.display = 'none';
+    switchRequestView('all');
+  });
+  document.getElementById('allRequestsViewTab').addEventListener('click', () => switchRequestView('all'));
+  document.getElementById('myRequestsViewTab').addEventListener('click', () => switchRequestView('my'));
+  document.getElementById('openRequestsTab').addEventListener('click', () => switchRequestStatus('open'));
+  document.getElementById('closedRequestsTab').addEventListener('click', () => switchRequestStatus('closed'));
+  const savedToken = localStorage.getItem('github_token');
+  const savedUser = localStorage.getItem('github_user');
+  if(savedToken && savedUser){
+    githubToken = savedToken;
+    try{ githubUser = JSON.parse(savedUser); }catch(e){}
+    updateLoginUI();
+  }
+  const urlState = readStateFromLocation();
+  if(urlState.device && (urlState.device==='pc'||urlState.device==='android')) currentDevice = urlState.device;
+  document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
+  document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
+  loadGames(currentDevice);
+  setTimeout(()=>{ try{ restoreStateFromLocation(); }catch(e){} }, 400);
+  window.addEventListener('hashchange', () => { try { restoreStateFromLocation(); } catch(e){} });
+  window.addEventListener('popstate', () => { try { restoreStateFromLocation(); } catch(e){} });
+});
+</script>
+</body>
+</html>
