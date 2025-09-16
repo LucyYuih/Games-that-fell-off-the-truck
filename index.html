@@ -249,12 +249,42 @@ function parseGamesTxt(txt){
   for(let i=0;i<lines.length;i++){
     const raw = lines[i];
     const line = raw.replace(/\u00A0/g,' ').trim();
-    if(!line) continue;
+
+    // se linha vazia => separador entre blocos
+    if(!line){
+      flushBlock();
+      continue;
+    }
     if(line.startsWith('#')) continue;
+
     const lower = line.toLowerCase();
-    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){ flushBlock(); currentCategory = capitalize(lower); continue; }
-    if(/^[-]{3,}$/.test(line)) continue;
+    // categoria explícita
+    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
+      flushBlock();
+      currentCategory = capitalize(lower);
+      continue;
+    }
+    if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
     if(line === '-') { flushBlock(); continue; }
+
+    // Peek: próxima linha não-vazia
+    const nextLine = (()=>{
+      for(let j=i+1;j<lines.length;j++){
+        const l = lines[j].replace(/\u00A0/g,' ').trim();
+        if(l) return l;
+      }
+      return null;
+    })();
+
+    // Se essa linha parece um TÍTULO (não contém url, não é "Original" nem "Image:")
+    // e a próxima linha é uma URL, e já existe um bloco em construção,
+    // então este é o início de um novo bloco -> flush o anterior.
+    const mightBeTitle = !/https?:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
+    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine);
+    if(mightBeTitle && nextIsUrl && block.length>0){
+      flushBlock();
+    }
+
     block.push(line);
   }
   flushBlock();
