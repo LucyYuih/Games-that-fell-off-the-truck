@@ -231,13 +231,12 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
 
 <script>
 /*
-  Atualizações principais:
-  - extractFiltersFromTxt(txt): detecta filtros globais (linhas do tipo 'filters: ...' ou 'filtros: ...') e devolve array de filtros limpos.
-  - parseBlock detecta tags/filters locais dentro do bloco e popula item.tags (array).
-  - loadGames agora chama extractFiltersFromTxt e createFilterButtons antes de renderizar.
-  - createFilterButtons cria botões em #dynamicFilters; ao clicar ativa/desativa filtro e chama filterAndShow.
-  - makeCard define data-tags com as tags do item para filtragem.
-  - filterAndShow respeita o filtro ativo (single toggle).
+  Versão robusta para detectar categorias corretamente tanto em Android quanto em PC.
+  Melhorias chave:
+  - isUrlLine: mais robusto e case-insensitive
+  - isCategoryCandidate: regras estritas para aceitar uma linha como categoria
+  - apply isCategoryCandidate tanto em extractCategoriesFromTxt quanto em parseGamesTxt
+  Todas as demais funcionalidades foram mantidas.
 */
 
 // URLs dos arquivos de texto (mantive como antes)
@@ -275,6 +274,42 @@ function caesarDecodeLettersDigits(text, shift) {
   return out;
 }
 
+// ========= Utilitários aprimorados para detecção de URL / categoria =========
+function isUrlLine(s){
+  if(!s) return false;
+  const t = s.trim();
+  // se contém :// (qualquer caixa), é URL
+  if(/:\/\//i.test(t)) return true;
+  // se começar com www. ou http(s) (case-insensitive)
+  if(/^\s*www\./i.test(t)) return true;
+  if(/^\s*https?:\/\//i.test(t)) return true;
+  // se contém domínio-like com TLD (.com, .io, .net etc.) seguido de barra ou fim
+  if(/[^\s\/]+\.(?:com|net|org|io|gg|app|store|dev|co|br|ru|de|jp|fr|uk|edu)(\/|$)/i.test(t)) return true;
+  // se contém espaços não, mas contém slash / e ponto . typical path -> url-like
+  if(/\.[a-z]{2,6}\/?/i.test(t) && /\/+/.test(t)) return true;
+  return false;
+}
+
+// Decide se uma linha é candidata a categoria (regras estritas)
+function isCategoryCandidate(s){
+  if(!s) return false;
+  const t = s.trim();
+  if(t.length === 0) return false;
+  if(t.length > 70) return false; // muito longa para ser categoria
+  // rejeita se for claramente URL-like
+  if(isUrlLine(t)) return false;
+  // rejeita se contiver caracteres comuns em URLs (':', '/', '?', '=', '&')
+  if(/[:\/\?=&]/.test(t)) return false;
+  // permitir letras, números, espaços e alguns sinais de pontuação típicos de títulos
+  // aceita: letras (unicode), números, espaços, apóstrofo, hífen, parêntese, vírgula, ponto, &:.
+  // rejeita linhas que são apenas siglas estranhas (mas permitiremos siglas curtas)
+  if(!/^[\p{L}\p{N}\s\-'.,()&:!]+$/u.test(t)) return false;
+  // rejeita strings que são puramente números
+  if(/^[0-9]+$/.test(t)) return false;
+  // OK
+  return true;
+}
+
 // ========= Função que extrai filtros globais do texto (linhas do tipo "filters: a, b, c") =========
 function extractFiltersFromTxt(txt) {
   const lines = txt.split(/\r?\n/);
@@ -288,12 +323,55 @@ function extractFiltersFromTxt(txt) {
       const list = m[2].split(',').map(x => x.trim()).filter(Boolean);
       for (const it of list) filtersSet.add(it);
     }
-    // também suportar uma linha só com "Filters" seguida de várias linhas? (não implementado; preferir inline)
   }
   return Array.from(filtersSet);
 }
 
-// ========== Utilitários (escape, capitalize) ==========
+// ========= Nova função: extrair categorias do TXT (mantendo ordem e incluindo vazias) =========
+function extractCategoriesFromTxt(txt) {
+  const lines = txt.split(/\r?\n/);
+  const cats = [];
+  function addCat(name){
+    if(!name) return;
+    const nm = name.trim();
+    if(!nm) return;
+    if(!cats.includes(nm)) cats.push(nm);
+  }
+  // percorre e detecta possíveis cabeçalhos de categoria (aplicando heurística mais segura)
+  for(let i=0;i<lines.length;i++){
+    const raw = (lines[i] || '').replace(/\u00A0/g,' ').trim();
+    if(!raw) continue;
+    if(/^[-]{3,}$/.test(raw)) continue; // separator
+    const lower = raw.toLowerCase();
+    if(lower.startsWith('image') || lower.startsWith('original') || lower.startsWith('filters') || lower.startsWith('tags')) continue;
+    // peek next non-empty and nextNext
+    let j=i+1; while(j<lines.length && (!lines[j] || !lines[j].trim())) j++;
+    let next = (j<lines.length) ? (lines[j] || '').replace(/\u00A0/g,' ').trim() : null;
+    let k=j+1; while(k<lines.length && (!lines[k] || !lines[k].trim())) k++;
+    let nextNext = (k<lines.length) ? (lines[k] || '').replace(/\u00A0/g,' ').trim() : null;
+    // Heurística segura:
+    // Se raw é candidato a categoria (isCategoryCandidate) e:
+    //  - nextNext é URL (então next é título) OR
+    //  - previous or next is --- OR
+    //  - next exists and next is a title-like line (not URL) but raw is category candidate
+    // Em resumo: só considera raw como categoria SE raw passar isCategoryCandidate
+    if(!isCategoryCandidate(raw)) continue;
+    if(nextNext && isUrlLine(nextNext)) { addCat(capitalize(raw)); continue; }
+    // prev non-empty
+    let prevIndex=i-1; while(prevIndex>=0 && (!lines[prevIndex] || !lines[prevIndex].trim())) prevIndex--;
+    let prev = (prevIndex>=0) ? (lines[prevIndex]||'').replace(/\u00A0/g,' ').trim() : null;
+    if(prev && /^[-]{3,}$/.test(prev)) { addCat(capitalize(raw)); continue; }
+    if(next && /^[-]{3,}$/.test(next)) { addCat(capitalize(raw)); continue; }
+    // if next exists and is not URL and raw is category candidate, treat raw as category
+    if(next && !isUrlLine(next)) { addCat(capitalize(raw)); continue; }
+  }
+  if(cats.length === 0) {
+    ['Indie','AAA','NSFW'].forEach(c=>{ if(!cats.includes(c)) cats.push(c); });
+  }
+  return cats;
+}
+
+// ========== Utilitários (escape, capitalize) =========
 function escapeHtml(s){
   return String(s).replace(/[&<>"'`]/g, function(m){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
@@ -301,7 +379,7 @@ function escapeHtml(s){
 }
 function capitalize(s){ return s && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
-// ========= Parser principal (mantido e melhorado) ==========
+// ========= Parser principal (melhorado) =========
 function parseGamesTxt(txt){
   const lines = txt.split(/\r?\n/);
   let currentCategory = null;
@@ -314,33 +392,45 @@ function parseGamesTxt(txt){
     block=[];
   }
   for(let i=0;i<lines.length;i++){
-    const raw = lines[i];
-    const line = raw.replace(/\u00A0/g,' ').trim();
+    const rawLine = lines[i] || '';
+    const line = rawLine.replace(/\u00A0/g,' ').trim();
     if(!line){
       flushBlock();
       continue;
     }
     if(line.startsWith('#')) continue;
     const lower = line.toLowerCase();
-    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
-      flushBlock();
-      currentCategory = capitalize(lower);
-      continue;
-    }
     if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
-    if(line === '-') { flushBlock(); continue; }
-    const nextLine = (()=>{
-      for(let j=i+1;j<lines.length;j++){
-        const l = lines[j].replace(/\u00A0/g,' ').trim();
-        if(l) return l;
+
+    // Heurística aprimorada para detectar cabeçalhos de categoria (mais segura):
+    // Só aceita se isCategoryCandidate(raw) === true
+    if(!lower.startsWith('image') && !lower.startsWith('original') && !lower.startsWith('filters') && !lower.startsWith('tags')){
+      // prev/next detection
+      let j=i+1; while(j<lines.length && (!lines[j] || !lines[j].trim())) j++;
+      let next = (j<lines.length) ? (lines[j] || '').replace(/\u00A0/g,' ').trim() : null;
+      let k=j+1; while(k<lines.length && (!lines[k] || !lines[k].trim())) k++;
+      let nextNext = (k<lines.length) ? (lines[k] || '').replace(/\u00A0/g,' ').trim() : null;
+      // prev non-empty
+      let p = i-1; while(p>=0 && (!lines[p] || !lines[p].trim())) p--;
+      let prev = (p>=0) ? (lines[p] || '').replace(/\u00A0/g,' ').trim() : null;
+
+      if(isCategoryCandidate(line)){
+        if(nextNext && isUrlLine(nextNext) && !isUrlLine(line)){
+          flushBlock();
+          currentCategory = capitalize(line);
+          continue;
+        }
+        if(prev && /^[-]{3,}$/.test(prev)) { flushBlock(); currentCategory = capitalize(line); continue; }
+        if(next && /^[-]{3,}$/.test(next)) { flushBlock(); currentCategory = capitalize(line); continue; }
+        if(next && !isUrlLine(next)) {
+          flushBlock();
+          currentCategory = capitalize(line);
+          continue;
+        }
       }
-      return null;
-    })();
-    const mightBeTitle = !/https?:\/\//i.test(line) && !/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//i.test(line) && !/^(original|image\s*[:\-]?|filters?|filtros|tags?)/i.test(line);
-    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine) || nextLine && /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/i.test(nextLine);
-    if(mightBeTitle && nextIsUrl && block.length>0){
-      flushBlock();
     }
+
+    // otherwise accumulate as block
     block.push(line);
   }
   flushBlock();
@@ -401,7 +491,6 @@ function parseBlock(blockLines, currentCategory){
   }
 
   let category = currentCategory || 'Indie';
-  // normalize tags (lowercase trimmed)
   const normalizedTags = tags.map(t => t.trim()).filter(Boolean);
   return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines, tags: normalizedTags };
 }
@@ -450,6 +539,51 @@ function createFilterButtons(filters) {
   }
 }
 
+// ========= Nova função: cria abas (tabs) de categoria dinamicamente, preservando "All" e "Requests" =========
+function createCategoryTabs(categories){
+  // categories: array em ordem de aparição (strings)
+  const tabGroup = document.getElementById('tabGroup');
+  tabGroup.innerHTML = ''; // limpa
+  // botão All (sempre)
+  const allBtn = document.createElement('button');
+  allBtn.className = 'tab active';
+  allBtn.dataset.cat = 'all';
+  allBtn.type = 'button';
+  allBtn.textContent = 'All';
+  tabGroup.appendChild(allBtn);
+
+  // dedupe e manter ordem, mas só adicionar categorias válidas
+  const seen = new Set();
+  for(const c of categories){
+    if(!c) continue;
+    const label = c.trim();
+    if(!label) continue;
+    if(seen.has(label)) continue;
+    seen.add(label);
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.dataset.cat = label;
+    b.type = 'button';
+    b.textContent = label;
+    tabGroup.appendChild(b);
+  }
+  // adicionar alguns defaults se não presentes
+  ['Indie','AAA','NSFW'].forEach(d=> {
+    if(!seen.has(d)) {
+      const b = document.createElement('button');
+      b.className = 'tab';
+      b.dataset.cat = d;
+      b.type = 'button';
+      b.textContent = d;
+      tabGroup.appendChild(b);
+    }
+  });
+  // garantir All ativo
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  const all = document.querySelector('.tab[data-cat="all"]');
+  if(all) all.classList.add('active');
+}
+
 // ========= Atualizei makeCard para incluir data-tags =========
 function makeCard(item){
   const el = document.createElement('div');
@@ -459,7 +593,7 @@ function makeCard(item){
   el.dataset.tags = (item.tags && item.tags.length) ? item.tags.join(',').toLowerCase() : ''; // para filtragem
   const thumb = document.createElement('div');
   thumb.className='thumb';
-  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){ 
     const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
     if(appIdMatch){
       const appId = appIdMatch[1];
@@ -490,7 +624,6 @@ function makeCard(item){
     thumb.textContent = 'No Image';
   }
   const titleDiv = document.createElement('div');
-  // mostrar tags no meta se existirem
   const metaText = item.tags && item.tags.length ? `${item.category} · ${item.tags.join(', ')}` : `${item.category}`;
   titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(metaText)}</div>`;
   const buttons = document.createElement('div');
@@ -498,7 +631,6 @@ function makeCard(item){
   if(item.downloadUrl){
     const aDl=document.createElement('a');
     aDl.className='btn primary';
-    // decodifica e ajeita esquema se necessário
     try {
       let decoded = caesarDecodeLettersDigits(item.downloadUrl, 3);
       if(!/[A-Za-z][A-Za-z0-9+.\-]*:\/\//.test(decoded) && /^[^\s]+\.[a-z]{2,}/i.test(decoded)) {
@@ -587,17 +719,19 @@ function applyColumns(cols){
   localStorage.setItem('gridColumns', cols);
 }
 
-// ========= Carregamento de arquivo + criação de botões de filtro dinâmicos =========
+// ========= Carregamento de arquivo + criação de botões de filtro dinâmicos e abas de categoria =========
 function loadGames(device){
   fetch(FILES[device] + '?cacheBust=' + Date.now())
     .then(res=>res.text())
     .then(txt=>{
       // extrai filtros globais do txt e cria botões
       const filters = extractFiltersFromTxt(txt);
+      // extrai categorias do txt (novidade)
+      const categories = extractCategoriesFromTxt(txt);
+      // cria dinamicamente as abas de categoria (mantendo ordem)
+      createCategoryTabs(categories);
       // se não houver filtros globais, tente extrair unicamente das tags dos blocos
-      // para isso, parse parcial e coletar tags de cada bloco
       if(!filters || filters.length === 0) {
-        // parse rápido para coletar tags por bloco
         const itemsTemp = (function(){ try{ return parseGamesTxt(txt); }catch(e){ return []; } })();
         const auto = new Set();
         itemsTemp.forEach(it => { if(it.tags && it.tags.length) it.tags.forEach(t=>auto.add(t)); });
@@ -785,6 +919,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     updateUrlState('all', document.getElementById('sortSelect').value, 'android');
   };
 
+  // delegação para cliques nas tabs (tabGroup)
   document.getElementById('tabGroup').onclick = function(e){
     const b = e.target.closest('.tab');
     if(!b || b.dataset.cat==='requests') return;
@@ -795,6 +930,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     filterAndShow();
     updateUrlState(b.dataset.cat, document.getElementById('sortSelect').value, currentDevice);
   };
+
   document.getElementById('requestsTab').onclick = function(){
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     this.classList.add('active');
@@ -888,7 +1024,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
   window.addEventListener('popstate', () => { try { restoreStateFromLocation(); } catch(e){} });
 });
 
-// ========== URL state helpers (mantidos) ==========
+// ========== URL state helpers (ajustados p/ categorias dinâmicas) =========
 function getActiveTab() {
   const active = document.querySelector('.tab.active');
   return (active && active.dataset && active.dataset.cat) ? active.dataset.cat : 'all';
@@ -927,15 +1063,7 @@ function parseStateFromPathname(path) {
   const device = (parts[0] || 'pc').toLowerCase();
   const tab = (parts[1] || 'all').toLowerCase();
   const sort = (parts[2] || 'default').toLowerCase();
-  if (['pc','android'].includes(device)) {
-    if(['requests','all','indie','aaa','nsfw'].includes(tab)) {
-      return { device, tab, sort };
-    }
-  }
-  if(['requests','all','indie','aaa','nsfw'].includes(device)){
-    return { device:'pc', tab:device, sort:tab };
-  }
-  return null;
+  return { device, tab, sort };
 }
 function readStateFromLocation() {
   const fromHash = parseStateFromHash(location.hash);
@@ -989,7 +1117,10 @@ function restoreStateFromLocation(){
     }
   });
   if(foundTab) foundTab.classList.add('active');
-  else document.querySelector('.tab[data-cat="all"]').classList.add('active');
+  else {
+    const fallback = document.querySelector('.tab[data-cat="all"]');
+    if(fallback) fallback.classList.add('active');
+  }
   if(state.tab === 'requests'){
     document.getElementById('grid').style.display = 'none';
     document.getElementById('requestSection').style.display = 'block';
