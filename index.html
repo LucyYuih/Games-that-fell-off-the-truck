@@ -42,9 +42,12 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
 .options-menu input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; width:20px;height:20px;border-radius:50%;background:linear-gradient(90deg,var(--accent),#4bb6ff);box-shadow:0 6px 18px rgba(124,92,247,0.18); }
 .options-menu input[type=range]::-moz-range-thumb{ width:20px;height:20px;border-radius:50%;background:linear-gradient(90deg,var(--accent),#4bb6ff);border:0; }
 .cols-count{ background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.04); padding:6px 10px; border-radius:8px; font-weight:800; color:#eaf2ff; min-width:38px; text-align:center; font-size:13px;}
-.device-filters{display:flex;gap:12px;margin-bottom:10px;}
+.device-filters{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;align-items:center;}
 .device-btn{padding:8px 18px;border-radius:999px;cursor:pointer;font-weight:700;font-size:14px;border:1px solid rgba(255,255,255,0.08);background:var(--glass);color:var(--muted);}
 .device-btn.active{background:linear-gradient(90deg,#4bb6ff,#7c5cf7);color:#06111a;border:0;}
+.dynamic-filters { display:flex; gap:8px; align-items:center; margin-left: 8px; flex-wrap:wrap; }
+.filter-btn { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.04); color: var(--muted); cursor: pointer; font-weight:700;}
+.filter-btn.active { background: linear-gradient(90deg,#4bb6ff,#7c5cf7); color: #06111a; border:0; }
 .tabs{display:flex;gap:8px;padding:12px 0;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
 .tab-group{display:flex;gap:8px;flex:1;align-items:center;flex-wrap:wrap;}
 .tab{background:transparent;border:1px solid rgba(255,255,255,0.04);padding:8px 12px;border-radius:12px;color:var(--muted);cursor:pointer;font-weight:600;font-size:13px;}
@@ -113,10 +116,16 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
         </div>
       </div>
     </header>
-    <div class="device-filters" id="deviceFilters">
-      <button class="device-btn active" data-device="pc" id="btnPC">PC</button>
-      <button class="device-btn" data-device="android" id="btnAndroid">Android</button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+      <div class="device-filters" id="deviceFilters">
+        <button class="device-btn active" data-device="pc" id="btnPC">PC</button>
+        <button class="device-btn" data-device="android" id="btnAndroid">Android</button>
+      </div>
+      <!-- container onde os filtros do TXT serão criados dinamicamente -->
+      <div class="dynamic-filters" id="dynamicFilters" aria-live="polite"></div>
     </div>
+
     <nav class="tabs" id="tabs">
       <div class="tab-group" id="tabGroup">
         <button class="tab active" data-cat="all" type="button">All</button>
@@ -126,9 +135,11 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
       </div>
       <button class="tab requests-tab" data-cat="requests" id="requestsTab" type="button">Requests</button>
     </nav>
+
     <main>
       <section id="grid" class="grid" aria-live="polite"></section>
       <section id="requestSection" style="display: none;">
+        <!-- request form (mantido como antes) -->
         <form class="request-form" id="requestForm" novalidate>
           <h2>Request a Game</h2>
           <p style="margin-bottom: 16px; color: var(--muted);">Submit your request for a new game to be added to the collection (requires GitHub login).</p>
@@ -171,6 +182,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
               </div>
             </div>
           </div>
+
           <div class="form-group">
             <label for="requestTitle">Title*</label>
             <input type="text" id="requestTitle" class="form-control" placeholder="Name of the game, etc." required>
@@ -199,6 +211,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
             <a href="https://github.com/LucyYuih/Games-that-fell-off-the-truck/issues" target="_blank" class="btn ghost">View All Requests</a>
           </div>
         </form>
+
         <div class="request-divider" style="height:18px;"></div>
         <h2>Requests</h2>
         <div class="request-view-tabs" style="display: flex; gap: 8px; margin: 12px 0;">
@@ -215,51 +228,667 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
     </main>
     <div class="footer">@LucyYuih</div>
   </div>
+
 <script>
+/*
+  Atualizações principais:
+  - extractFiltersFromTxt(txt): detecta filtros globais (linhas do tipo 'filters: ...' ou 'filtros: ...') e devolve array de filtros limpos.
+  - parseBlock detecta tags/filters locais dentro do bloco e popula item.tags (array).
+  - loadGames agora chama extractFiltersFromTxt e createFilterButtons antes de renderizar.
+  - createFilterButtons cria botões em #dynamicFilters; ao clicar ativa/desativa filtro e chama filterAndShow.
+  - makeCard define data-tags com as tags do item para filtragem.
+  - filterAndShow respeita o filtro ativo (single toggle).
+*/
+
+// URLs dos arquivos de texto (mantive como antes)
 const FILES = {
   pc: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/games.txt',
   android: 'https://raw.githubusercontent.com/LucyYuih/Games-that-fell-off-the-truck/main/gamesandroid.txt'
 };
 let currentDevice = 'pc';
+let activeFilter = null; // filtro ativo vindo dos botões dinâmicos
 
-// ======= Adicionado: função para decodificar cifra de César sobre letras e dígitos (shift = 3) =======
-// Observação: conforme solicitado, apenas letras (A-Z, a-z) e dígitos (0-9) são deslocados.
-// Para decodificar deslocamento 3 (isto assume que o link foi cifrado com shift +3), usamos shift=3 aqui.
+// função para decodificar César (letras + dígitos) shift=3 (usada no botão Download)
 function caesarDecodeLettersDigits(text, shift) {
-  // shift é número inteiro (ex.: 3). Esta função aplica a rotação inversa (subtrai shift).
   const sLetters = ((shift % 26) + 26) % 26;
   const sDigits = ((shift % 10) + 10) % 10;
   let out = '';
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     const code = ch.charCodeAt(0);
-    // lowercase
     if (code >= 97 && code <= 122) {
       const base = 97;
       const dec = (code - base - sLetters + 26) % 26 + base;
       out += String.fromCharCode(dec);
-    }
-    // uppercase
-    else if (code >= 65 && code <= 90) {
+    } else if (code >= 65 && code <= 90) {
       const base = 65;
       const dec = (code - base - sLetters + 26) % 26 + base;
       out += String.fromCharCode(dec);
-    }
-    // digits
-    else if (code >= 48 && code <= 57) {
+    } else if (code >= 48 && code <= 57) {
       const base = 48;
       const dec = (code - base - sDigits + 10) % 10 + base;
       out += String.fromCharCode(dec);
-    }
-    else {
+    } else {
       out += ch;
     }
   }
   return out;
 }
-// =====================================================================================================
 
-// ========== URL STATE MANAGEMENT ==========
+// ========= Função que extrai filtros globais do texto (linhas do tipo "filters: a, b, c") =========
+function extractFiltersFromTxt(txt) {
+  const lines = txt.split(/\r?\n/);
+  const filtersSet = new Set();
+  for (let raw of lines) {
+    const line = raw.replace(/\u00A0/g,' ').trim();
+    if (!line) continue;
+    // identificadores aceitos: filters:, filtros:, tags:, categories:
+    const m = line.match(/^(filters?|filtros|tags?|categories?)\s*[:\-]\s*(.+)$/i);
+    if (m) {
+      const list = m[2].split(',').map(x => x.trim()).filter(Boolean);
+      for (const it of list) filtersSet.add(it);
+    }
+    // também suportar uma linha só com "Filters" seguida de várias linhas? (não implementado; preferir inline)
+  }
+  return Array.from(filtersSet);
+}
+
+// ========== Utilitários (escape, capitalize) ==========
+function escapeHtml(s){
+  return String(s).replace(/[&<>"'`]/g, function(m){
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
+  });
+}
+function capitalize(s){ return s && s.length ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+
+// ========= Parser principal (mantido e melhorado) ==========
+function parseGamesTxt(txt){
+  const lines = txt.split(/\r?\n/);
+  let currentCategory = null;
+  const items = [];
+  let block = [];
+  function flushBlock(){
+    if(block.length===0) return;
+    let item = parseBlock(block, currentCategory);
+    if(item) items.push(item);
+    block=[];
+  }
+  for(let i=0;i<lines.length;i++){
+    const raw = lines[i];
+    const line = raw.replace(/\u00A0/g,' ').trim();
+    if(!line){
+      flushBlock();
+      continue;
+    }
+    if(line.startsWith('#')) continue;
+    const lower = line.toLowerCase();
+    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
+      flushBlock();
+      currentCategory = capitalize(lower);
+      continue;
+    }
+    if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
+    if(line === '-') { flushBlock(); continue; }
+    const nextLine = (()=>{
+      for(let j=i+1;j<lines.length;j++){
+        const l = lines[j].replace(/\u00A0/g,' ').trim();
+        if(l) return l;
+      }
+      return null;
+    })();
+    const mightBeTitle = !/https?:\/\//i.test(line) && !/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//i.test(line) && !/^(original|image\s*[:\-]?|filters?|filtros|tags?)/i.test(line);
+    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine) || nextLine && /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/i.test(nextLine);
+    if(mightBeTitle && nextIsUrl && block.length>0){
+      flushBlock();
+    }
+    block.push(line);
+  }
+  flushBlock();
+  return items;
+}
+
+function parseBlock(blockLines, currentCategory){
+  if(blockLines.length === 0) return null;
+  const lines = blockLines.filter(l => l && l.trim() !== '');
+  const title = lines[0].trim();
+  let downloadUrl = null, pageUrl = null, imageUrl = null;
+  let gotOriginal = false;
+  const urls = [];
+  const tags = []; // tags locais do bloco
+  // detecta QUALQUER esquema tipo xxx://...
+  const extractUrls = (str) => {
+    const m = str.match(/[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/g);
+    return m || [];
+  };
+  for(let i=1;i<lines.length;i++){
+    const ln = lines[i].trim();
+    // linha de imagem explícita (mantive)
+    const imageLineMatch = ln.match(/^\s*image\s*[:\-]?\s*(https?:\/\/[^\s)]+)\s*$/i);
+    if(imageLineMatch){
+      imageUrl = imageLineMatch[1];
+      continue;
+    }
+    if(ln.toLowerCase() === 'original'){ gotOriginal = true; continue; }
+    // detecta tags locais do bloco: filters: a, b  ou tags: a,b
+    const tagMatch = ln.match(/^(filters?|filtros|tags?)\s*[:\-]\s*(.+)$/i);
+    if(tagMatch){
+      // junta as tags locais
+      const local = tagMatch[2].split(',').map(x=>x.trim()).filter(Boolean);
+      for(const t of local) if(!tags.includes(t)) tags.push(t);
+      continue;
+    }
+    const found = extractUrls(ln);
+    if(found.length){
+      for(const u of found) urls.push(u);
+    } else {
+      // fallback: detectar domínios sem esquema (ex: example.com/abc)
+      const domainLike = ln.match(/([^\s]+\.[a-z]{2,}(\/[^\s]*)?)/i);
+      if(domainLike && domainLike[1]) {
+        urls.push(domainLike[1]);
+      }
+    }
+  }
+
+  // Garantir primeiro link/string após o título como downloadUrl
+  if(urls.length > 0){
+    downloadUrl = urls[0];
+    if(urls.length >= 2) pageUrl = urls[1];
+    if(urls.length >= 3) imageUrl = imageUrl || urls[2];
+    if(!imageUrl){
+      const last = urls[urls.length - 1];
+      if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
+    }
+  }
+
+  let category = currentCategory || 'Indie';
+  // normalize tags (lowercase trimmed)
+  const normalizedTags = tags.map(t => t.trim()).filter(Boolean);
+  return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines, tags: normalizedTags };
+}
+
+// ========= Função que cria botões de filtro dinâmicos =========
+function createFilterButtons(filters) {
+  const container = document.getElementById('dynamicFilters');
+  container.innerHTML = ''; // limpa
+  if(!filters || filters.length === 0) return;
+  // botão "Limpar filtro"
+  const clearBtn = document.createElement('button');
+  clearBtn.className = 'filter-btn';
+  clearBtn.textContent = 'Mostrar tudo';
+  clearBtn.onclick = function(){
+    activeFilter = null;
+    // remover classe active de todos
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    clearBtn.classList.add('active');
+    filterAndShow();
+  };
+  container.appendChild(clearBtn);
+  // inicialmente "Mostrar tudo" ativo
+  clearBtn.classList.add('active');
+
+  for(const f of filters){
+    const b = document.createElement('button');
+    b.className = 'filter-btn';
+    b.textContent = f;
+    b.dataset.filter = f;
+    b.onclick = function(){
+      // toggle single-active behavior
+      const wasActive = b.classList.contains('active');
+      // limpar todos
+      document.querySelectorAll('.filter-btn').forEach(x=>x.classList.remove('active'));
+      if(!wasActive){
+        b.classList.add('active');
+        activeFilter = b.dataset.filter;
+      } else {
+        // se clicar no ativo, remove filtro e ativa "Mostrar tudo"
+        activeFilter = null;
+        clearBtn.classList.add('active');
+      }
+      filterAndShow();
+    };
+    container.appendChild(b);
+  }
+}
+
+// ========= Atualizei makeCard para incluir data-tags =========
+function makeCard(item){
+  const el = document.createElement('div');
+  el.className='card';
+  el.dataset.title=item.title.toLowerCase();
+  el.dataset.category=item.category;
+  el.dataset.tags = (item.tags && item.tags.length) ? item.tags.join(',').toLowerCase() : ''; // para filtragem
+  const thumb = document.createElement('div');
+  thumb.className='thumb';
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+    const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
+    if(appIdMatch){
+      const appId = appIdMatch[1];
+      const img = document.createElement('img');
+      img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
+      img.alt = '';
+      thumb.appendChild(img);
+    }else{
+      thumb.textContent = 'No Image';
+    }
+  }
+  else if(currentDevice==='android'){
+    if(item.imageUrl){
+      const img = document.createElement('img');
+      img.src = item.imageUrl;
+      img.alt = '';
+      thumb.appendChild(img);
+    }else if(item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+      const img = document.createElement('img');
+      img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
+      img.alt = '';
+      thumb.appendChild(img);
+    }else{
+      thumb.textContent = 'No Image';
+    }
+  }
+  else{
+    thumb.textContent = 'No Image';
+  }
+  const titleDiv = document.createElement('div');
+  // mostrar tags no meta se existirem
+  const metaText = item.tags && item.tags.length ? `${item.category} · ${item.tags.join(', ')}` : `${item.category}`;
+  titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(metaText)}</div>`;
+  const buttons = document.createElement('div');
+  buttons.className='buttons';
+  if(item.downloadUrl){
+    const aDl=document.createElement('a');
+    aDl.className='btn primary';
+    // decodifica e ajeita esquema se necessário
+    try {
+      let decoded = caesarDecodeLettersDigits(item.downloadUrl, 3);
+      if(!/[A-Za-z][A-Za-z0-9+.\-]*:\/\//.test(decoded) && /^[^\s]+\.[a-z]{2,}/i.test(decoded)) {
+        decoded = 'http://' + decoded;
+      }
+      aDl.href = decoded;
+    } catch (e) {
+      aDl.href = item.downloadUrl;
+    }
+    aDl.target='_blank';
+    aDl.rel='noopener';
+    aDl.textContent='Download';
+    buttons.appendChild(aDl);
+  }
+  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
+    const aSteam = document.createElement('a');
+    aSteam.className='btn ghost';
+    aSteam.href=item.pageUrl;
+    aSteam.target='_blank';
+    aSteam.rel='noopener';
+    aSteam.textContent='Steam Page';
+    buttons.appendChild(aSteam);
+  }
+  if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
+    const aPlay = document.createElement('a');
+    aPlay.className='btn ghost';
+    aPlay.href=item.pageUrl;
+    aPlay.target='_blank';
+    aPlay.rel='noopener';
+    aPlay.textContent='Google Play Page';
+    buttons.appendChild(aPlay);
+  }
+  el.appendChild(thumb);
+  el.appendChild(titleDiv);
+  el.appendChild(buttons);
+  return el;
+}
+
+// ========= Render grid =========
+function renderGrid(items){
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  window.currentItems=items;
+  const frag=document.createDocumentFragment();
+  for(const it of items) frag.appendChild(makeCard(it));
+  grid.appendChild(frag);
+  filterAndShow();
+}
+
+// ========= Filtragem (search + tab + activeFilter) =========
+function filterAndShow() {
+  const query = (document.getElementById('search').value || '').toLowerCase();
+  const catBtn = document.querySelector('.tab.active');
+  let cat = catBtn ? catBtn.dataset.cat : 'all';
+  cat = cat.toLowerCase();
+  const grid = document.getElementById('grid');
+  Array.from(grid.children).forEach(card => {
+    const cardCat = (card.dataset.category || '').toLowerCase();
+    const matchTitle = card.dataset.title.includes(query);
+    const matchCat = (cat === 'all') || (cardCat === cat);
+    // checar filtro ativo (tags)
+    let matchFilter = true;
+    if(activeFilter){
+      const tags = (card.dataset.tags || '').toLowerCase();
+      matchFilter = tags.split(',').map(x=>x.trim()).filter(Boolean).includes(activeFilter.toLowerCase());
+    }
+    card.style.display = (matchTitle && matchCat && matchFilter) ? '' : 'none';
+  });
+}
+
+// ========= Ordenação e colunas =========
+function applySortAndReorder(){
+  const sort = document.getElementById('sortSelect').value;
+  const grid = document.getElementById('grid');
+  let cards = Array.from(grid.children);
+  if(sort === 'alpha'){
+    cards = cards.sort((a,b)=>a.dataset.title.localeCompare(b.dataset.title));
+  }
+  grid.innerHTML = '';
+  for(const card of cards) grid.appendChild(card);
+  filterAndShow();
+}
+function applyColumns(cols){
+  cols = Math.max(1, Math.min(8, parseInt(cols)));
+  document.documentElement.style.setProperty('--cols', cols);
+  localStorage.setItem('gridColumns', cols);
+}
+
+// ========= Carregamento de arquivo + criação de botões de filtro dinâmicos =========
+function loadGames(device){
+  fetch(FILES[device] + '?cacheBust=' + Date.now())
+    .then(res=>res.text())
+    .then(txt=>{
+      // extrai filtros globais do txt e cria botões
+      const filters = extractFiltersFromTxt(txt);
+      // se não houver filtros globais, tente extrair unicamente das tags dos blocos
+      // para isso, parse parcial e coletar tags de cada bloco
+      if(!filters || filters.length === 0) {
+        // parse rápido para coletar tags por bloco
+        const itemsTemp = (function(){ try{ return parseGamesTxt(txt); }catch(e){ return []; } })();
+        const auto = new Set();
+        itemsTemp.forEach(it => { if(it.tags && it.tags.length) it.tags.forEach(t=>auto.add(t)); });
+        createFilterButtons(Array.from(auto));
+      } else {
+        createFilterButtons(filters);
+      }
+      // renderiza itens completos
+      renderGrid(parseGamesTxt(txt));
+    })
+    .catch(e=>{
+      document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Erro ao carregar lista: ${escapeHtml(e.message)}</div>`;
+    });
+}
+
+// ================== Requests / GitHub (mantidos) ==================
+const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
+const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
+let githubToken = null;
+let githubUser = null;
+function showLoginError(msg){
+  document.getElementById('loginError').textContent = msg;
+  document.getElementById('loginError').style.display = 'block';
+}
+function updateLoginUI(){
+  if(githubUser){
+    document.getElementById('loginForm').style.display = 'none';
+    document.getElementById('loginSuccess').style.display = 'block';
+    document.getElementById('githubUsername').textContent = githubUser.login;
+    if(githubUser.avatar_url){
+      document.getElementById('userAvatar').src = githubUser.avatar_url;
+      document.getElementById('userAvatar').style.display = '';
+      document.getElementById('defaultAvatar').style.display = 'none';
+    }else{
+      document.getElementById('userAvatar').style.display = 'none';
+      document.getElementById('defaultAvatar').style.display = '';
+    }
+    document.getElementById('myRequestsViewTab').style.display = '';
+  }else{
+    document.getElementById('loginForm').style.display = 'block';
+    document.getElementById('loginSuccess').style.display = 'none';
+    document.getElementById('myRequestsViewTab').style.display = 'none';
+  }
+  document.getElementById('loginError').style.display = 'none';
+}
+async function authenticateWithGitHub(username, token){
+  document.getElementById('loginSpinner').style.display = '';
+  document.getElementById('githubLoginBtn').disabled = true;
+  try{
+    const res = await fetch('https://api.github.com/user', {
+      headers: { Authorization: 'token ' + token }
+    });
+    if(!res.ok) throw new Error('Invalid token');
+    githubUser = await res.json();
+    githubToken = token;
+    localStorage.setItem('github_token', token);
+    localStorage.setItem('github_user', JSON.stringify(githubUser));
+    updateLoginUI();
+  }catch(e){
+    showLoginError('GitHub authentication failed: ' + e.message);
+  }
+  document.getElementById('loginSpinner').style.display = 'none';
+  document.getElementById('githubLoginBtn').disabled = false;
+}
+function switchRequestView(view){
+  document.getElementById('allRequestsViewTab').classList.toggle('active', view === 'all');
+  document.getElementById('myRequestsViewTab').classList.toggle('active', view === 'my');
+  loadRequests(view);
+}
+function switchRequestStatus(status){
+  document.getElementById('openRequestsTab').classList.toggle('active', status === 'open');
+  document.getElementById('closedRequestsTab').classList.toggle('active', status === 'closed');
+  loadRequests(null, status);
+}
+async function submitRequest(){
+  if(!githubToken){
+    showLoginError('You must be logged in to submit a request.');
+    return;
+  }
+  const title = document.getElementById('requestTitle').value.trim();
+  const category = document.getElementById('requestCategory').value.trim();
+  const link = document.getElementById('requestLink').value.trim();
+  const description = document.getElementById('requestDescription').value.trim();
+  if(!title || !category || !link){
+    showLoginError('Please fill in all required fields.');
+    return;
+  }
+  const body = `**Category:** ${category}\n**Link:** ${link}\n\n${description}`;
+  document.getElementById('submitRequest').disabled = true;
+  try{
+    const res = await fetch(ISSUES_API, {
+      method: 'POST',
+      headers: {
+        Authorization: 'token ' + githubToken,
+        Accept: 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({ title, body })
+    });
+    if(res.status === 201){
+      document.getElementById('requestForm').reset();
+      loadRequests();
+      alert('Request submitted!');
+    }else{
+      const err = await res.json();
+      showLoginError('Request failed: ' + (err.message || res.status));
+    }
+  }catch(e){
+    showLoginError('Error submitting request: '+e.message);
+  }
+  document.getElementById('submitRequest').disabled = false;
+}
+async function loadRequests(view, status){
+  const grid = document.getElementById('requestsGrid');
+  grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">Loading requests...</div>';
+  let url = ISSUES_API + '?per_page=50&state=all';
+  try{
+    const res = await fetch(url);
+    const issues = await res.json();
+    let filtered = issues;
+    if(status === 'open') filtered = issues.filter(i=>i.state==='open');
+    if(status === 'closed') filtered = issues.filter(i=>i.state==='closed');
+    if(view === 'my' && githubUser) filtered = filtered.filter(i=>i.user.login===githubUser.login);
+    grid.innerHTML = '';
+    for(const issue of filtered) grid.appendChild(makeRequestCard(issue));
+    if(filtered.length === 0) grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">No requests found.</div>';
+  }catch(e){
+    grid.innerHTML = '<div style="color:#e74c3c;padding:20px;">Error loading requests: '+e.message+'</div>';
+  }
+}
+function makeRequestCard(issue){
+  const el = document.createElement('div');
+  el.className = 'request-card';
+  const statusClass = issue.state === 'open' ? 'status-open' : 'status-closed';
+  el.innerHTML = `
+    <div class="request-title">${escapeHtml(issue.title)}</div>
+    <div class="request-meta">
+      <span class="request-category">${extractCategory(issue.body)}</span>
+      <a class="request-link" href="${extractLink(issue.body)}" target="_blank">Link</a>
+      <span>by <b>${escapeHtml(issue.user.login)}</b></span>
+    </div>
+    <div class="request-body">${escapeHtml(extractDescription(issue.body))}</div>
+    <div class="request-status ${statusClass}">${issue.state.toUpperCase()}</div>
+    <a href="${issue.html_url}" target="_blank" style="color:${issue.state==='open'?'#7c5cf7':'#e74c3c'};font-size:13px;">View on GitHub</a>
+  `;
+  return el;
+}
+function extractCategory(body){
+  const m = body.match(/\*\*Category:\*\*\s*([^\n]+)/);
+  return m ? m[1] : "N/A";
+}
+function extractLink(body){
+  const m = body.match(/\*\*Link:\*\*\s*(https?:\/\/[^\s]+)/);
+  return m ? m[1] : "#";
+}
+function extractDescription(body){
+  return body.replace(/\*\*Category:.*\*\*Link:.*\n*/s,'').trim();
+}
+
+// ========= Event listeners e inicialização =========
+document.addEventListener('DOMContentLoaded', ()=> {
+  document.getElementById('btnPC').onclick = function(){
+    if(currentDevice==='pc') return;
+    currentDevice='pc';
+    document.getElementById('btnPC').classList.add('active');
+    document.getElementById('btnAndroid').classList.remove('active');
+    activeFilter = null;
+    loadGames('pc');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.tab[data-cat="all"]').classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'pc');
+  };
+  document.getElementById('btnAndroid').onclick = function(){
+    if(currentDevice==='android') return;
+    currentDevice='android';
+    document.getElementById('btnPC').classList.remove('active');
+    document.getElementById('btnAndroid').classList.add('active');
+    activeFilter = null;
+    loadGames('android');
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelector('.tab[data-cat="all"]').classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'android');
+  };
+
+  document.getElementById('tabGroup').onclick = function(e){
+    const b = e.target.closest('.tab');
+    if(!b || b.dataset.cat==='requests') return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+    filterAndShow();
+    updateUrlState(b.dataset.cat, document.getElementById('sortSelect').value, currentDevice);
+  };
+  document.getElementById('requestsTab').onclick = function(){
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    this.classList.add('active');
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('requestSection').style.display = 'block';
+    loadRequests();
+    updateUrlState('requests','default',currentDevice);
+  };
+
+  document.getElementById('sortSelect').addEventListener('change', function(){
+    applySortAndReorder();
+    updateUrlState(getActiveTab(), this.value, currentDevice);
+  });
+  document.getElementById('search').addEventListener('input', filterAndShow);
+
+  const zoomSlider = document.getElementById('zoomSlider');
+  const colsCount = document.getElementById('colsCount');
+  if (zoomSlider) {
+    zoomSlider.addEventListener('input', e => {
+      applyColumns(e.target.value);
+      colsCount.textContent = e.target.value;
+    });
+    const savedCols = parseInt(localStorage.getItem('gridColumns') || getComputedStyle(document.documentElement).getPropertyValue('--cols') || 3, 10);
+    zoomSlider.value = Math.min(8, Math.max(1, savedCols));
+    colsCount.textContent = zoomSlider.value;
+    applyColumns(zoomSlider.value);
+  }
+  const optionsBtn = document.getElementById('optionsBtn');
+  const optionsMenu = document.getElementById('optionsMenu');
+  if (optionsBtn) {
+    optionsBtn.addEventListener('click', ()=> {
+      const isVisible = optionsMenu.classList.contains('show');
+      if (isVisible) {
+        optionsMenu.classList.remove('show');
+        optionsMenu.setAttribute('aria-hidden', 'true');
+      } else {
+        optionsMenu.classList.add('show');
+        optionsMenu.setAttribute('aria-hidden', 'false');
+      }
+    });
+  }
+  document.addEventListener('click', (e) => {
+    if (optionsMenu && !optionsMenu.contains(e.target) && !optionsBtn.contains(e.target)) {
+      optionsMenu.classList.remove('show');
+      optionsMenu.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  document.getElementById('submitRequest').addEventListener('click', submitRequest);
+  document.getElementById('githubLoginBtn').addEventListener('click', async () => {
+    const username = document.getElementById('githubUsernameInput').value.trim();
+    const token = document.getElementById('githubTokenInput').value.trim();
+    if (!username || !token) {
+      showLoginError('Please enter both username and token');
+      return;
+    }
+    await authenticateWithGitHub(username, token);
+  });
+  document.getElementById('githubLogoutBtn').addEventListener('click', () => {
+    githubToken = null;
+    githubUser = null;
+    localStorage.removeItem('github_token');
+    localStorage.removeItem('github_user');
+    updateLoginUI();
+    document.getElementById('myRequestsViewTab').style.display = 'none';
+    switchRequestView('all');
+  });
+  document.getElementById('allRequestsViewTab').addEventListener('click', () => switchRequestView('all'));
+  document.getElementById('myRequestsViewTab').addEventListener('click', () => switchRequestView('my'));
+  document.getElementById('openRequestsTab').addEventListener('click', () => switchRequestStatus('open'));
+  document.getElementById('closedRequestsTab').addEventListener('click', () => switchRequestStatus('closed'));
+
+  const savedToken = localStorage.getItem('github_token');
+  const savedUser = localStorage.getItem('github_user');
+  if(savedToken && savedUser){
+    githubToken = savedToken;
+    try{ githubUser = JSON.parse(savedUser); }catch(e){}
+    updateLoginUI();
+  }
+
+  // initial load: read URL state (device/tab) if houver
+  const urlState = readStateFromLocation();
+  if(urlState.device && (urlState.device==='pc'||urlState.device==='android')) currentDevice = urlState.device;
+  document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
+  document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
+  // load and create filters/buttons accordingly
+  loadGames(currentDevice);
+
+  setTimeout(()=>{ try{ restoreStateFromLocation(); }catch(e){} }, 400);
+  window.addEventListener('hashchange', () => { try { restoreStateFromLocation(); } catch(e){} });
+  window.addEventListener('popstate', () => { try { restoreStateFromLocation(); } catch(e){} });
+});
+
+// ========== URL state helpers (mantidos) ==========
 function getActiveTab() {
   const active = document.querySelector('.tab.active');
   return (active && active.dataset && active.dataset.cat) ? active.dataset.cat : 'all';
@@ -374,501 +1003,6 @@ function restoreStateFromLocation(){
   }
   filterAndShow();
 }
-
-// ========================================================================
-// RESTO DO CÓDIGO ORIGINAL (mantido, ajustando detector de URLs)
-// ========================================================================
-function escapeHtml(s){
-  return String(s).replace(/[&<>"'`]/g, function(m){
-    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
-  });
-}
-function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
-function parseGamesTxt(txt){
-  const lines = txt.split(/\r?\n/);
-  let currentCategory = null;
-  const items = [];
-  let block = [];
-  function flushBlock(){
-    if(block.length===0) return;
-    let item = parseBlock(block, currentCategory);
-    if(item) items.push(item);
-    block=[];
-  }
-  for(let i=0;i<lines.length;i++){
-    const raw = lines[i];
-    const line = raw.replace(/\u00A0/g,' ').trim();
-    if(!line){
-      flushBlock();
-      continue;
-    }
-    if(line.startsWith('#')) continue;
-    const lower = line.toLowerCase();
-    if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
-      flushBlock();
-      currentCategory = capitalize(lower);
-      continue;
-    }
-    if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
-    if(line === '-') { flushBlock(); continue; }
-    const nextLine = (()=>{
-      for(let j=i+1;j<lines.length;j++){
-        const l = lines[j].replace(/\u00A0/g,' ').trim();
-        if(l) return l;
-      }
-      return null;
-    })();
-    const mightBeTitle = !/https?:\/\//i.test(line) && !/^[a-zA-Z][a-zA-Z0-9+.\-]*:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
-    const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine) || nextLine && /[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/i.test(nextLine);
-    if(mightBeTitle && nextIsUrl && block.length>0){
-      flushBlock();
-    }
-    block.push(line);
-  }
-  flushBlock();
-  return items;
-}
-function parseBlock(blockLines, currentCategory){
-  if(blockLines.length === 0) return null;
-  const lines = blockLines.filter(l => l && l.trim() !== '');
-  const title = lines[0].trim();
-  let downloadUrl = null, pageUrl = null, imageUrl = null;
-  let gotOriginal = false;
-  const urls = [];
-  // ======= ALTERAÇÃO IMPORTANTE: agora capturamos QUALQUER esquema do tipo `xxx://...` (inclui kwwsv:// e outros obfuscados) =======
-  const extractUrls = (str) => {
-    // aceita esquemas com letras, dígitos e sinais + . - (ex.: https://, kwwsv://, eqqmp://, ftp://, etc.)
-    const m = str.match(/[A-Za-z][A-Za-z0-9+.\-]*:\/\/[^\s)]+/g);
-    return m || [];
-  };
-  for(let i=1;i<lines.length;i++){
-    const ln = lines[i].trim();
-    const imageLineMatch = ln.match(/^\s*image\s*[:\-]?\s*(https?:\/\/[^\s)]+)\s*$/i);
-    if(imageLineMatch){
-      imageUrl = imageLineMatch[1];
-      continue;
-    }
-    if(ln.toLowerCase() === 'original'){ gotOriginal = true; continue; }
-    const found = extractUrls(ln);
-    if(found.length){
-      for(const u of found) urls.push(u);
-    } else {
-      // se nenhuma URL com esquema for encontrada, tentar capturar casos onde o link não tem esquema mas parece domínio (ex: example.com/abc)
-      const domainLike = ln.match(/([^\s]+\.[a-z]{2,}(\/[^\s]*)?)/i);
-      if(domainLike && domainLike[1]) {
-        // prefixa com http:// para manter como URL detectada (não altera string original deixada para decodificação)
-        urls.push(domainLike[1]);
-      }
-    }
-  }
-  // ======= Garantir que o PRIMEIRO link/string após o nome do jogo é sempre usado como downloadUrl =======
-  if(urls.length > 0){
-    downloadUrl = urls[0];
-    if(urls.length >= 2) pageUrl = urls[1];
-    if(urls.length >= 3) imageUrl = imageUrl || urls[2];
-    if(!imageUrl){
-      const last = urls[urls.length - 1];
-      if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
-    }
-  }
-  let category = currentCategory || 'Indie';
-  return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines };
-}
-function makeCard(item){
-  const el = document.createElement('div');
-  el.className='card';
-  el.dataset.title=item.title.toLowerCase();
-  el.dataset.category=item.category;
-  const thumb = document.createElement('div');
-  thumb.className='thumb';
-  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
-    const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
-    if(appIdMatch){
-      const appId = appIdMatch[1];
-      const img = document.createElement('img');
-      img.src = `https://cdn.cloudflare.steamstatic.com/steam/apps/${appId}/header.jpg`;
-      img.alt = '';
-      thumb.appendChild(img);
-    }else{
-      thumb.textContent = 'No Image';
-    }
-  }
-  else if(currentDevice==='android'){
-    if(item.imageUrl){
-      const img = document.createElement('img');
-      img.src = item.imageUrl;
-      img.alt = '';
-      thumb.appendChild(img);
-    }else if(item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
-      const img = document.createElement('img');
-      img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
-      img.alt = '';
-      thumb.appendChild(img);
-    }else{
-      thumb.textContent = 'No Image';
-    }
-  }
-  else{
-    thumb.textContent = 'No Image';
-  }
-  const titleDiv = document.createElement('div');
-  titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(item.category)}</div>`;
-  const buttons = document.createElement('div');
-  buttons.className='buttons';
-  if(item.downloadUrl){
-    const aDl=document.createElement('a');
-    aDl.className='btn primary';
-    // ======= Decodifica o link com cifra de César (shift 3) apenas para o botão Download =======
-    try {
-      // se downloadUrl foi detectado sem esquema (ex: example.com/...), não queremos quebrar a decodificação;
-      // aplicar decodificação e, se a string resultante não tem esquema, prefixar com http:// para que <a> funcione.
-      let decoded = caesarDecodeLettersDigits(item.downloadUrl, 3);
-      // se o decoded resultante ainda estiver sem '://' e parecer domínio, prefixa http://
-      if(!/[A-Za-z][A-Za-z0-9+.\-]*:\/\//.test(decoded) && /^[^\s]+\.[a-z]{2,}/i.test(decoded)) {
-        decoded = 'http://' + decoded;
-      }
-      aDl.href = decoded;
-    } catch (e) {
-      aDl.href = item.downloadUrl;
-    }
-    aDl.target='_blank';
-    aDl.rel='noopener';
-    aDl.textContent='Download';
-    buttons.appendChild(aDl);
-  }
-  if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
-    const aSteam = document.createElement('a');
-    aSteam.className='btn ghost';
-    aSteam.href=item.pageUrl;
-    aSteam.target='_blank';
-    aSteam.rel='noopener';
-    aSteam.textContent='Steam Page';
-    buttons.appendChild(aSteam);
-  }
-  if(currentDevice==='android' && item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
-    const aPlay = document.createElement('a');
-    aPlay.className='btn ghost';
-    aPlay.href=item.pageUrl;
-    aPlay.target='_blank';
-    aPlay.rel='noopener';
-    aPlay.textContent='Google Play Page';
-    buttons.appendChild(aPlay);
-  }
-  el.appendChild(thumb);
-  el.appendChild(titleDiv);
-  el.appendChild(buttons);
-  return el;
-}
-function renderGrid(items){
-  const grid=document.getElementById('grid');
-  grid.innerHTML='';
-  window.currentItems=items;
-  const frag=document.createDocumentFragment();
-  for(const it of items)
-    frag.appendChild(makeCard(it));
-  grid.appendChild(frag);
-  filterAndShow();
-}
-function filterAndShow() {
-  const query = (document.getElementById('search').value || '').toLowerCase();
-  const catBtn = document.querySelector('.tab.active');
-  let cat = catBtn ? catBtn.dataset.cat : 'all';
-  cat = cat.toLowerCase();
-  const grid = document.getElementById('grid');
-  Array.from(grid.children).forEach(card => {
-    const cardCat = (card.dataset.category || '').toLowerCase();
-    const matchTitle = card.dataset.title.includes(query);
-    const matchCat = (cat === 'all') || (cardCat === cat);
-    card.style.display = (matchTitle && matchCat) ? '' : 'none';
-  });
-}
-function applySortAndReorder(){
-  const sort = document.getElementById('sortSelect').value;
-  const grid = document.getElementById('grid');
-  let cards = Array.from(grid.children);
-  if(sort === 'alpha'){
-    cards = cards.sort((a,b)=>a.dataset.title.localeCompare(b.dataset.title));
-  }
-  grid.innerHTML = '';
-  for(const card of cards) grid.appendChild(card);
-  filterAndShow();
-}
-function applyColumns(cols){
-  cols = Math.max(1, Math.min(8, parseInt(cols)));
-  document.documentElement.style.setProperty('--cols', cols);
-  localStorage.setItem('gridColumns', cols);
-}
-function loadGames(device){
-  fetch(FILES[device] + '?cacheBust=' + Date.now())
-    .then(res=>res.text())
-    .then(txt=>{renderGrid(parseGamesTxt(txt));})
-    .catch(e=>{
-      document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Erro ao carregar lista: ${escapeHtml(e.message)}</div>`;
-    });
-}
-// REQUESTS CODE ...
-const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
-const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
-let githubToken = null;
-let githubUser = null;
-function showLoginError(msg){
-  document.getElementById('loginError').textContent = msg;
-  document.getElementById('loginError').style.display = 'block';
-}
-function updateLoginUI(){
-  if(githubUser){
-    document.getElementById('loginForm').style.display = 'none';
-    document.getElementById('loginSuccess').style.display = 'block';
-    document.getElementById('githubUsername').textContent = githubUser.login;
-    if(githubUser.avatar_url){
-      document.getElementById('userAvatar').src = githubUser.avatar_url;
-      document.getElementById('userAvatar').style.display = '';
-      document.getElementById('defaultAvatar').style.display = 'none';
-    }else{
-      document.getElementById('userAvatar').style.display = 'none';
-      document.getElementById('defaultAvatar').style.display = '';
-    }
-    document.getElementById('myRequestsViewTab').style.display = '';
-  }else{
-    document.getElementById('loginForm').style.display = 'block';
-    document.getElementById('loginSuccess').style.display = 'none';
-    document.getElementById('myRequestsViewTab').style.display = 'none';
-  }
-  document.getElementById('loginError').style.display = 'none';
-}
-async function authenticateWithGitHub(username, token){
-  document.getElementById('loginSpinner').style.display = '';
-  document.getElementById('githubLoginBtn').disabled = true;
-  try{
-    const res = await fetch('https://api.github.com/user', {
-      headers: { Authorization: 'token ' + token }
-    });
-    if(!res.ok) throw new Error('Invalid token');
-    githubUser = await res.json();
-    githubToken = token;
-    localStorage.setItem('github_token', token);
-    localStorage.setItem('github_user', JSON.stringify(githubUser));
-    updateLoginUI();
-  }catch(e){
-    showLoginError('GitHub authentication failed: ' + e.message);
-  }
-  document.getElementById('loginSpinner').style.display = 'none';
-  document.getElementById('githubLoginBtn').disabled = false;
-}
-function switchRequestView(view){
-  document.getElementById('allRequestsViewTab').classList.toggle('active', view === 'all');
-  document.getElementById('myRequestsViewTab').classList.toggle('active', view === 'my');
-  loadRequests(view);
-}
-function switchRequestStatus(status){
-  document.getElementById('openRequestsTab').classList.toggle('active', status === 'open');
-  document.getElementById('closedRequestsTab').classList.toggle('active', status === 'closed');
-  loadRequests(null, status);
-}
-async function submitRequest(){
-  if(!githubToken){
-    showLoginError('You must be logged in to submit a request.');
-    return;
-  }
-  const title = document.getElementById('requestTitle').value.trim();
-  const category = document.getElementById('requestCategory').value.trim();
-  const link = document.getElementById('requestLink').value.trim();
-  const description = document.getElementById('requestDescription').value.trim();
-  if(!title || !category || !link){
-    showLoginError('Please fill in all required fields.');
-    return;
-  }
-  const body = `**Category:** ${category}\n**Link:** ${link}\n\n${description}`;
-  document.getElementById('submitRequest').disabled = true;
-  try{
-    const res = await fetch(ISSUES_API, {
-      method: 'POST',
-      headers: {
-        Authorization: 'token ' + githubToken,
-        Accept: 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({ title, body })
-    });
-    if(res.status === 201){
-      document.getElementById('requestForm').reset();
-      loadRequests();
-      alert('Request submitted!');
-    }else{
-      const err = await res.json();
-      showLoginError('Request failed: ' + (err.message || res.status));
-    }
-  }catch(e){
-    showLoginError('Error submitting request: '+e.message);
-  }
-  document.getElementById('submitRequest').disabled = false;
-}
-async function loadRequests(view, status){
-  const grid = document.getElementById('requestsGrid');
-  grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">Loading requests...</div>';
-  let url = ISSUES_API + '?per_page=50&state=all';
-  try{
-    const res = await fetch(url);
-    const issues = await res.json();
-    let filtered = issues;
-    if(status === 'open') filtered = issues.filter(i=>i.state==='open');
-    if(status === 'closed') filtered = issues.filter(i=>i.state==='closed');
-    if(view === 'my' && githubUser) filtered = filtered.filter(i=>i.user.login===githubUser.login);
-    grid.innerHTML = '';
-    for(const issue of filtered){
-      grid.appendChild(makeRequestCard(issue));
-    }
-    if(filtered.length === 0) grid.innerHTML = '<div style="color:#97a0ac;padding:20px;">No requests found.</div>';
-  }catch(e){
-    grid.innerHTML = '<div style="color:#e74c3c;padding:20px;">Error loading requests: '+e.message+'</div>';
-  }
-}
-function makeRequestCard(issue){
-  const el = document.createElement('div');
-  el.className = 'request-card';
-  const statusClass = issue.state === 'open' ? 'status-open' : 'status-closed';
-  el.innerHTML = `
-    <div class="request-title">${escapeHtml(issue.title)}</div>
-    <div class="request-meta">
-      <span class="request-category">${extractCategory(issue.body)}</span>
-      <a class="request-link" href="${extractLink(issue.body)}" target="_blank">Link</a>
-      <span>by <b>${escapeHtml(issue.user.login)}</b></span>
-    </div>
-    <div class="request-body">${escapeHtml(extractDescription(issue.body))}</div>
-    <div class="request-status ${statusClass}">${issue.state.toUpperCase()}</div>
-    <a href="${issue.html_url}" target="_blank" style="color:${issue.state==='open'?'#7c5cf7':'#e74c3c'};font-size:13px;">View on GitHub</a>
-  `;
-  return el;
-}
-function extractCategory(body){
-  const m = body.match(/\*\*Category:\*\*\s*([^\n]+)/);
-  return m ? m[1] : "N/A";
-}
-function extractLink(body){
-  const m = body.match(/\*\*Link:\*\*\s*(https?:\/\/[^\s]+)/);
-  return m ? m[1] : "#";
-}
-function extractDescription(body){
-  return body.replace(/\*\*Category:.*\*\*Link:.*\n*/s,'').trim();
-}
-document.addEventListener('DOMContentLoaded', ()=> {
-  document.getElementById('btnPC').onclick = function(){
-    if(currentDevice==='pc') return;
-    currentDevice='pc';
-    document.getElementById('btnPC').classList.add('active');
-    document.getElementById('btnAndroid').classList.remove('active');
-    loadGames('pc');
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelector('.tab[data-cat="all"]').classList.add('active');
-    document.getElementById('grid').style.display = 'grid';
-    document.getElementById('requestSection').style.display = 'none';
-    updateUrlState('all', document.getElementById('sortSelect').value, 'pc');
-  };
-  document.getElementById('btnAndroid').onclick = function(){
-    if(currentDevice==='android') return;
-    currentDevice='android';
-    document.getElementById('btnPC').classList.remove('active');
-    document.getElementById('btnAndroid').classList.add('active');
-    loadGames('android');
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelector('.tab[data-cat="all"]').classList.add('active');
-    document.getElementById('grid').style.display = 'grid';
-    document.getElementById('requestSection').style.display = 'none';
-    updateUrlState('all', document.getElementById('sortSelect').value, 'android');
-  };
-  document.getElementById('tabGroup').onclick = function(e){
-    const b = e.target.closest('.tab');
-    if(!b || b.dataset.cat==='requests') return;
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    document.getElementById('grid').style.display = 'grid';
-    document.getElementById('requestSection').style.display = 'none';
-    filterAndShow();
-    updateUrlState(b.dataset.cat, document.getElementById('sortSelect').value, currentDevice);
-  };
-  document.getElementById('requestsTab').onclick = function(){
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    this.classList.add('active');
-    document.getElementById('grid').style.display = 'none';
-    document.getElementById('requestSection').style.display = 'block';
-    loadRequests();
-    updateUrlState('requests','default',currentDevice);
-  };
-  document.getElementById('sortSelect').addEventListener('change', function(){
-    applySortAndReorder();
-    updateUrlState(getActiveTab(), this.value, currentDevice);
-  });
-  document.getElementById('search').addEventListener('input', filterAndShow);
-  const zoomSlider = document.getElementById('zoomSlider');
-  const colsCount = document.getElementById('colsCount');
-  if (zoomSlider) {
-    zoomSlider.addEventListener('input', e => {
-      applyColumns(e.target.value);
-      colsCount.textContent = e.target.value;
-    });
-    const savedCols = parseInt(localStorage.getItem('gridColumns') || getComputedStyle(document.documentElement).getPropertyValue('--cols') || 3, 10);
-    zoomSlider.value = Math.min(8, Math.max(1, savedCols));
-    colsCount.textContent = zoomSlider.value;
-    applyColumns(zoomSlider.value);
-  }
-  const optionsBtn = document.getElementById('optionsBtn');
-  const optionsMenu = document.getElementById('optionsMenu');
-  if (optionsBtn) {
-    optionsBtn.addEventListener('click', ()=> {
-      const isVisible = optionsMenu.classList.contains('show');
-      if (isVisible) {
-        optionsMenu.classList.remove('show');
-        optionsMenu.setAttribute('aria-hidden', 'true');
-      } else {
-        optionsMenu.classList.add('show');
-        optionsMenu.setAttribute('aria-hidden', 'false');
-      }
-    });
-  }
-  document.addEventListener('click', (e) => {
-    if (optionsMenu && !optionsMenu.contains(e.target) && !optionsBtn.contains(e.target)) {
-      optionsMenu.classList.remove('show');
-      optionsMenu.setAttribute('aria-hidden', 'true');
-    }
-  });
-  document.getElementById('submitRequest').addEventListener('click', submitRequest);
-  document.getElementById('githubLoginBtn').addEventListener('click', async () => {
-    const username = document.getElementById('githubUsernameInput').value.trim();
-    const token = document.getElementById('githubTokenInput').value.trim();
-    if (!username || !token) {
-      showLoginError('Please enter both username and token');
-      return;
-    }
-    await authenticateWithGitHub(username, token);
-  });
-  document.getElementById('githubLogoutBtn').addEventListener('click', () => {
-    githubToken = null;
-    githubUser = null;
-    localStorage.removeItem('github_token');
-    localStorage.removeItem('github_user');
-    updateLoginUI();
-    document.getElementById('myRequestsViewTab').style.display = 'none';
-    switchRequestView('all');
-  });
-  document.getElementById('allRequestsViewTab').addEventListener('click', () => switchRequestView('all'));
-  document.getElementById('myRequestsViewTab').addEventListener('click', () => switchRequestView('my'));
-  document.getElementById('openRequestsTab').addEventListener('click', () => switchRequestStatus('open'));
-  document.getElementById('closedRequestsTab').addEventListener('click', () => switchRequestStatus('closed'));
-  const savedToken = localStorage.getItem('github_token');
-  const savedUser = localStorage.getItem('github_user');
-  if(savedToken && savedUser){
-    githubToken = savedToken;
-    try{ githubUser = JSON.parse(savedUser); }catch(e){}
-    updateLoginUI();
-  }
-  const urlState = readStateFromLocation();
-  if(urlState.device && (urlState.device==='pc'||urlState.device==='android')) currentDevice = urlState.device;
-  document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
-  document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
-  loadGames(currentDevice);
-  setTimeout(()=>{ try{ restoreStateFromLocation(); }catch(e){} }, 400);
-  window.addEventListener('hashchange', () => { try { restoreStateFromLocation(); } catch(e){} });
-  window.addEventListener('popstate', () => { try { restoreStateFromLocation(); } catch(e){} });
-});
 </script>
 </body>
 </html>
