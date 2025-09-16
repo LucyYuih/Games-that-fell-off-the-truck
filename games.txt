@@ -1,8 +1,8 @@
 Indie
 Balatro
-https://ranoz.gg/file/S9rnte7I
+https://ranoz.gg/file/UZbncbuj
 Original
-https://play.google.com/store/apps/details?id=com.playstack.balatro.android
+https://store.steampowered.com/app/2379780/Balatro/id=com.playstack.balatro.android
 Image: https://images.igdb.com/igdb/image/upload/t_cover_big/co9g3x.webp
 ---
 AAA
