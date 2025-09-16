@@ -68,7 +68,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
 .form-control { width:100%; padding:10px 12px; background: rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:10px; color:#eaf2ff; }
 .requests-grid { display: grid; gap: var(--gap); grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 .request-card { background: linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.02)); padding: 16px; border-radius: var(--radius); border: 1px solid rgba(255,255,255,0.03); position: relative;}
-.request-title{font-size:16px;margin:8px 0;font-weight:700;color:#eaf2ff}
+.request-title{font-size:16px;margin:8px 0;font-weight:700;color:#eaf2ff"}
 .request-meta { color: var(--muted); font-size:13px; margin-bottom: 10px; display:flex; gap:12px; align-items:center; }
 .request-category { display:inline-block; padding:4px 10px; background: rgba(124,92,247,0.1); border-radius:6px; color:#c6b3ff; font-weight:700; font-size:13px;}
 .request-body{font-size:14px;color:#d0d8e3;line-height:1.4;margin-bottom:8px}
@@ -96,7 +96,7 @@ header{display:flex;gap:16px;align-items:center;justify-content:space-between;ma
             🔎 <input id="search" placeholder="Search by name..." />
           </div>
           <div class="sort-wrap">
-            <label for="sortSelect" style="font-size:13px;color:var(--muted)">Sort:</label>
+            <label for="sortSelect" style="font-size:13px;color: var(--muted)">Sort:</label>
             <select id="sortSelect" class="sort-select" title="Sort games">
               <option value="default">Default</option>
               <option value="alpha">Alphabetical</option>
@@ -222,19 +222,181 @@ const FILES = {
 };
 let currentDevice = 'pc';
 
+// ======= Adicionado: função para decodificar cifra de César sobre letras e dígitos (shift = 3) =======
+// Observação: conforme solicitado, apenas letras (A-Z, a-z) e dígitos (0-9) são deslocados.
+// Para decodificar deslocamento 3 (isto assume que o link foi cifrado com shift +3), usamos shift=3 aqui.
+function caesarDecodeLettersDigits(text, shift) {
+  // shift é número inteiro (ex.: 3). Esta função aplica a rotação inversa (subtrai shift).
+  const sLetters = ((shift % 26) + 26) % 26;
+  const sDigits = ((shift % 10) + 10) % 10;
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const code = ch.charCodeAt(0);
+    // lowercase
+    if (code >= 97 && code <= 122) {
+      const base = 97;
+      const dec = (code - base - sLetters + 26) % 26 + base;
+      out += String.fromCharCode(dec);
+    }
+    // uppercase
+    else if (code >= 65 && code <= 90) {
+      const base = 65;
+      const dec = (code - base - sLetters + 26) % 26 + base;
+      out += String.fromCharCode(dec);
+    }
+    // digits
+    else if (code >= 48 && code <= 57) {
+      const base = 48;
+      const dec = (code - base - sDigits + 10) % 10 + base;
+      out += String.fromCharCode(dec);
+    }
+    else {
+      out += ch;
+    }
+  }
+  return out;
+}
+// =====================================================================================================
+
+// ========== URL STATE MANAGEMENT ==========
+// Agora salvando/restaurando device na URL também
+function getActiveTab() {
+  const active = document.querySelector('.tab.active');
+  return (active && active.dataset && active.dataset.cat) ? active.dataset.cat : 'all';
+}
+function getActiveDevice() {
+  return currentDevice || "pc";
+}
+function buildStatePath(tab, sort, device) {
+  device = (device || getActiveDevice() || 'pc').toLowerCase();
+  tab = (tab || 'all').toString().toLowerCase();
+  sort = (sort || 'default').toString().toLowerCase();
+  // /device/tab/sort
+  if (tab === 'requests') {
+    return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}`;
+  }
+  if (!sort || sort === 'default') {
+    return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}`;
+  }
+  return `/${encodeURIComponent(device)}/${encodeURIComponent(tab)}/${encodeURIComponent(sort)}`;
+}
+function parseStateFromHash(hash) {
+  if (!hash) return null;
+  const cleaned = hash.replace(/^#(!)?/, '');
+  if (!cleaned) return null;
+  const parts = cleaned.replace(/^\/+|\/+$/g,'').split('/');
+  // [device, tab, sort]
+  const device = (parts[0] || 'pc').toLowerCase();
+  const tab = (parts[1] || 'all').toLowerCase();
+  const sort = (parts[2] || 'default').toLowerCase();
+  return { device, tab, sort };
+}
+function parseStateFromPathname(path) {
+  if (!path) return null;
+  const p = path.split('?')[0].split('#')[0];
+  const clean = p.replace(/^\/+|\/+$/g,'');
+  if (!clean) return { device: 'pc', tab: 'all', sort: 'default' };
+  const parts = clean.split('/');
+  // [device, tab, sort]
+  const device = (parts[0] || 'pc').toLowerCase();
+  const tab = (parts[1] || 'all').toLowerCase();
+  const sort = (parts[2] || 'default').toLowerCase();
+  if (['pc','android'].includes(device)) {
+    if(['requests','all','indie','aaa','nsfw'].includes(tab)) {
+      return { device, tab, sort };
+    }
+  }
+  // fallback: support legacy (no device present)
+  if(['requests','all','indie','aaa','nsfw'].includes(device)){
+    return { device:'pc', tab:device, sort:tab };
+  }
+  return null;
+}
+function readStateFromLocation() {
+  // prefer hash (explicit)
+  const fromHash = parseStateFromHash(location.hash);
+  if (fromHash) return fromHash;
+  const fromPath = parseStateFromPathname(location.pathname);
+  if (fromPath) return fromPath;
+  return { device: 'pc', tab: 'all', sort: 'default' };
+}
+function updateUrlState(tab, sort, device) {
+  device = (device || getActiveDevice() || 'pc').toLowerCase();
+  tab = (tab || 'all').toString().toLowerCase();
+  sort = (sort || 'default').toString().toLowerCase();
+  const useHashRouting = (function(){
+    try {
+      if (location.protocol === 'file:') return true;
+      const host = (location.hostname || '').toLowerCase();
+      if (host.includes('github.io')) return true;
+    } catch(e){}
+    return false;
+  })();
+  try {
+    const path = buildStatePath(tab, sort, device);
+    if (useHashRouting) {
+      const hash = '#' + path;
+      if (location.hash !== hash) {
+        history.replaceState(null, '', location.pathname + hash);
+      }
+    } else {
+      const newUrl = path;
+      if (location.pathname !== newUrl || location.search !== '') {
+        history.replaceState(null, '', newUrl + location.search + location.hash);
+      }
+    }
+  } catch (e) {
+    // ignore
+    console.warn('updateUrlState failed', e);
+  }
+}
+function restoreStateFromLocation(){
+  const state = readStateFromLocation();
+  // Switch device if needed
+  if (state.device && (state.device === 'pc' || state.device === 'android') && state.device !== currentDevice) {
+    currentDevice = state.device;
+    // Visual feedback device buttons
+    document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
+    document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
+    loadGames(currentDevice);
+  }
+  // Tabs
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  // Now: always lowercase compare and set active, works for AAA/Indie/NSFW
+  let foundTab = null;
+  document.querySelectorAll('.tab').forEach(tabEl=>{
+    if(tabEl.dataset.cat && tabEl.dataset.cat.toLowerCase() === state.tab) {
+      foundTab = tabEl;
+    }
+  });
+  if(foundTab) foundTab.classList.add('active');
+  else document.querySelector('.tab[data-cat="all"]').classList.add('active');
+  // Requests section
+  if(state.tab === 'requests'){
+    document.getElementById('grid').style.display = 'none';
+    document.getElementById('requestSection').style.display = 'block';
+  }else{
+    document.getElementById('grid').style.display = 'grid';
+    document.getElementById('requestSection').style.display = 'none';
+  }
+  // Sort
+  if(document.getElementById('sortSelect')){
+    document.getElementById('sortSelect').value = state.sort || 'default';
+    applySortAndReorder();
+  }
+  filterAndShow();
+}
+
+// ========================================================================
+// RESTO DO CÓDIGO ORIGINAL (mantido, apenas adaptado onde necessário)
+// ========================================================================
 function escapeHtml(s){
   return String(s).replace(/[&<>"'`]/g, function(m){
     return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'})[m];
   });
 }
 function capitalize(s){ return s.charAt(0).toUpperCase() + s.slice(1); }
-
-/*
-  Parser melhorado:
-  - Suporta linha "Image: https://..." (case-insensitive)
-  - Se encontrar URLs, coleta; se a última URL tiver extensão de imagem, usa como imageUrl
-  - Para Android, se houver imageUrl, será usada como thumbnail
-*/
 function parseGamesTxt(txt){
   const lines = txt.split(/\r?\n/);
   let currentCategory = null;
@@ -249,16 +411,12 @@ function parseGamesTxt(txt){
   for(let i=0;i<lines.length;i++){
     const raw = lines[i];
     const line = raw.replace(/\u00A0/g,' ').trim();
-
-    // se linha vazia => separador entre blocos
     if(!line){
       flushBlock();
       continue;
     }
     if(line.startsWith('#')) continue;
-
     const lower = line.toLowerCase();
-    // categoria explícita
     if(lower === 'indie' || lower === 'aaa' || lower === 'nsfw'){
       flushBlock();
       currentCategory = capitalize(lower);
@@ -266,8 +424,6 @@ function parseGamesTxt(txt){
     }
     if(/^[-]{3,}$/.test(line)) { flushBlock(); continue; }
     if(line === '-') { flushBlock(); continue; }
-
-    // Peek: próxima linha não-vazia
     const nextLine = (()=>{
       for(let j=i+1;j<lines.length;j++){
         const l = lines[j].replace(/\u00A0/g,' ').trim();
@@ -275,22 +431,16 @@ function parseGamesTxt(txt){
       }
       return null;
     })();
-
-    // Se essa linha parece um TÍTULO (não contém url, não é "Original" nem "Image:")
-    // e a próxima linha é uma URL, e já existe um bloco em construção,
-    // então este é o início de um novo bloco -> flush o anterior.
     const mightBeTitle = !/https?:\/\//i.test(line) && !/^(original|image\s*[:\-]?)/i.test(line);
     const nextIsUrl = nextLine && /https?:\/\//i.test(nextLine);
     if(mightBeTitle && nextIsUrl && block.length>0){
       flushBlock();
     }
-
     block.push(line);
   }
   flushBlock();
   return items;
 }
-
 function parseBlock(blockLines, currentCategory){
   if(blockLines.length === 0) return null;
   const lines = blockLines.filter(l => l && l.trim() !== '');
@@ -298,14 +448,12 @@ function parseBlock(blockLines, currentCategory){
   let downloadUrl = null, pageUrl = null, imageUrl = null;
   let gotOriginal = false;
   const urls = [];
-  // helper to extract first url from string
   const extractUrls = (str) => {
     const m = str.match(/https?:\/\/[^\s)]+/g);
     return m || [];
   };
   for(let i=1;i<lines.length;i++){
     const ln = lines[i].trim();
-    // suportar linha "Image: <url>"
     const imageLineMatch = ln.match(/^\s*image\s*[:\-]?\s*(https?:\/\/[^\s)]+)\s*$/i);
     if(imageLineMatch){
       imageUrl = imageLineMatch[1];
@@ -317,41 +465,31 @@ function parseBlock(blockLines, currentCategory){
       for(const u of found) urls.push(u);
     }
   }
-  // assign downloadUrl / pageUrl / imageUrl by heuristics:
   if(urls.length > 0){
-    // se houver 1 URL => downloadUrl
     if(urls.length === 1){
       downloadUrl = urls[0];
     }else if(urls.length >= 2){
-      // primeiro checkbox: primeiro = download, segundo = page
       downloadUrl = urls[0];
       pageUrl = urls[1];
-      // se houver terceiro, considera como image por convenção do usuário
       if(urls.length >= 3){
         imageUrl = imageUrl || urls[2];
       }
     }
-    // se não definiu pageUrl e original marqueou, tenta usar a última url como pageUrl
     if(!pageUrl && gotOriginal && urls.length >= 2){
       pageUrl = urls[1];
     }
-    // se ainda não tem imageUrl, e a última url tem extensão de imagem, usa
     if(!imageUrl){
       const last = urls[urls.length - 1];
       if(/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(last)) imageUrl = last;
     }
   }
-
-  // se só teve uma url e ela é de playstore (ou imagem), tenta ajustar
   if(!pageUrl && downloadUrl && /play\.google\.com\/store\/apps/i.test(downloadUrl)){
     pageUrl = downloadUrl;
     downloadUrl = null;
   }
-
   let category = currentCategory || 'Indie';
   return { title, category, downloadUrl, pageUrl, imageUrl, rawLines: lines };
 }
-
 function makeCard(item){
   const el = document.createElement('div');
   el.className='card';
@@ -359,8 +497,6 @@ function makeCard(item){
   el.dataset.category=item.category;
   const thumb = document.createElement('div');
   thumb.className='thumb';
-
-  // PC: steam header (mantive sua lógica)
   if(currentDevice==='pc' && item.pageUrl && item.pageUrl.includes('steampowered.com/app/')){
     const appIdMatch = item.pageUrl.match(/\/app\/(\d+)/);
     if(appIdMatch){
@@ -373,17 +509,13 @@ function makeCard(item){
       thumb.textContent = 'No Image';
     }
   }
-  // ANDROID: usar imageUrl se existir; senão tentar ícone padrão do Play
   else if(currentDevice==='android'){
     if(item.imageUrl){
       const img = document.createElement('img');
       img.src = item.imageUrl;
       img.alt = '';
-      // tentar evitar mixed content: se a página for carregada via https e a image for http, o navegador pode bloquear.
-      // assumimos que o usuário colocará urls https. Não forçamos mudança.
       thumb.appendChild(img);
     }else if(item.pageUrl && item.pageUrl.includes('play.google.com/store/apps')){
-      // mantemos o ícone padrão do play como fallback
       const img = document.createElement('img');
       img.src = 'https://play-lh.googleusercontent.com/ogw/AOLn63E8Koz5A9iVgX2WWv7jDrXw7W3wYw6iUP3Fa9fN=s32-c-mo';
       img.alt = '';
@@ -395,7 +527,6 @@ function makeCard(item){
   else{
     thumb.textContent = 'No Image';
   }
-
   const titleDiv = document.createElement('div');
   titleDiv.innerHTML = `<div class="title">${escapeHtml(item.title)}</div><div class="meta">${escapeHtml(item.category)}</div>`;
   const buttons = document.createElement('div');
@@ -403,7 +534,15 @@ function makeCard(item){
   if(item.downloadUrl){
     const aDl=document.createElement('a');
     aDl.className='btn primary';
-    aDl.href=item.downloadUrl;
+    // ======= Alterado: decodificar o link com cifra de César (shift 3) apenas para o botão Download =======
+    try {
+      // decodifica letras e dígitos com shift 3 (assumindo que o link foi codificado com shift +3)
+      aDl.href = caesarDecodeLettersDigits(item.downloadUrl, 3);
+    } catch (e) {
+      // fallback se algo der errado: usa o link original sem decodificar
+      aDl.href = item.downloadUrl;
+    }
+    // ===================================================================================================
     aDl.target='_blank';
     aDl.rel='noopener';
     aDl.textContent='Download';
@@ -432,7 +571,6 @@ function makeCard(item){
   el.appendChild(buttons);
   return el;
 }
-
 function renderGrid(items){
   const grid=document.getElementById('grid');
   grid.innerHTML='';
@@ -445,7 +583,6 @@ function renderGrid(items){
 }
 function filterAndShow() {
   const query = (document.getElementById('search').value || '').toLowerCase();
-  // Pega tab ativa
   const catBtn = document.querySelector('.tab.active');
   let cat = catBtn ? catBtn.dataset.cat : 'all';
   cat = cat.toLowerCase();
@@ -481,8 +618,7 @@ function loadGames(device){
       document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Erro ao carregar lista: ${escapeHtml(e.message)}</div>`;
     });
 }
-
-// REQUESTS CODE (igual ao original, mantido!)
+// REQUESTS CODE ...
 const REPO = 'LucyYuih/Games-that-fell-off-the-truck';
 const ISSUES_API = `https://api.github.com/repos/${REPO}/issues`;
 let githubToken = null;
@@ -626,7 +762,6 @@ function extractLink(body){
 function extractDescription(body){
   return body.replace(/\*\*Category:.*\*\*Link:.*\n*/s,'').trim();
 }
-
 document.addEventListener('DOMContentLoaded', ()=> {
   document.getElementById('btnPC').onclick = function(){
     if(currentDevice==='pc') return;
@@ -638,6 +773,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     document.querySelector('.tab[data-cat="all"]').classList.add('active');
     document.getElementById('grid').style.display = 'grid';
     document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'pc');
   };
   document.getElementById('btnAndroid').onclick = function(){
     if(currentDevice==='android') return;
@@ -649,6 +785,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     document.querySelector('.tab[data-cat="all"]').classList.add('active');
     document.getElementById('grid').style.display = 'grid';
     document.getElementById('requestSection').style.display = 'none';
+    updateUrlState('all', document.getElementById('sortSelect').value, 'android');
   };
   document.getElementById('tabGroup').onclick = function(e){
     const b = e.target.closest('.tab');
@@ -658,6 +795,7 @@ document.addEventListener('DOMContentLoaded', ()=> {
     document.getElementById('grid').style.display = 'grid';
     document.getElementById('requestSection').style.display = 'none';
     filterAndShow();
+    updateUrlState(b.dataset.cat, document.getElementById('sortSelect').value, currentDevice);
   };
   document.getElementById('requestsTab').onclick = function(){
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -665,8 +803,12 @@ document.addEventListener('DOMContentLoaded', ()=> {
     document.getElementById('grid').style.display = 'none';
     document.getElementById('requestSection').style.display = 'block';
     loadRequests();
+    updateUrlState('requests','default',currentDevice);
   };
-  document.getElementById('sortSelect').addEventListener('change', applySortAndReorder);
+  document.getElementById('sortSelect').addEventListener('change', function(){
+    applySortAndReorder();
+    updateUrlState(getActiveTab(), this.value, currentDevice);
+  });
   document.getElementById('search').addEventListener('input', filterAndShow);
   const zoomSlider = document.getElementById('zoomSlider');
   const colsCount = document.getElementById('colsCount');
@@ -730,7 +872,17 @@ document.addEventListener('DOMContentLoaded', ()=> {
     try{ githubUser = JSON.parse(savedUser); }catch(e){}
     updateLoginUI();
   }
-  loadGames('pc');
+  // --- RESTAURAR POSIÇÃO DA URL NA CARGA DA PÁGINA ---
+  // carrega device/tab/sort do url
+  const urlState = readStateFromLocation();
+  if(urlState.device && (urlState.device==='pc'||urlState.device==='android')) currentDevice = urlState.device;
+  // Visual feedback device buttons
+  document.getElementById('btnPC').classList.toggle('active', currentDevice==='pc');
+  document.getElementById('btnAndroid').classList.toggle('active', currentDevice==='android');
+  loadGames(currentDevice);
+  setTimeout(()=>{ try{ restoreStateFromLocation(); }catch(e){} }, 400);
+  window.addEventListener('hashchange', () => { try { restoreStateFromLocation(); } catch(e){} });
+  window.addEventListener('popstate', () => { try { restoreStateFromLocation(); } catch(e){} });
 });
 </script>
 </body>
