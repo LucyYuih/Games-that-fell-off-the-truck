@@ -1,96 +1,70 @@
 Indie
 Balatro
 kwwsv://udqrc.jj/iloh/V2uqwh0L
-Original
 https://play.google.com/store/apps/details?id=com.playstack.balatro.android
-Image: https://cdn.cloudflare.steamstatic.com/steam/apps/2379780/header.jpg
+image: https://cdn.cloudflare.steamstatic.com/steam/apps/2379780/header.jpg
 
 Hollow Knight
 kwwsv://udqrc.jj/iloh/Amy9htQX
-Original
 https://store.steampowered.com/app/367520/Hollow_Knight/
-Image
 https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg
 
 Geometry Dash
 kwwsv://udqrc.jj/iloh/bR3gBWdC
-Original
 https://play.google.com/store/apps/details?id=com.robtopx.geometryjump&hl=en-US
-Image: https://play-lh.googleusercontent.com/QPS_wlJHQgy3G6KgWAcjjoXKOWJURujcw0LK70mzqBOCtFxoz0LSscWgoy0IYH97Dg=w2560-h1440-rw
+image: https://play-lh.googleusercontent.com/QPS_wlJHQgy3G6KgWAcjjoXKOWJURujcw0LK70mzqBOCtFxoz0LSscWgoy0IYH97Dg=w2560-h1440-rw
 
 Slime Rancher
 kwwsv://udqrc.jj/iloh/V0AeGHT6
-Original
 https://store.steampowered.com/app/433340/Slime_Rancher/
-Image
 https://cdn.cloudflare.steamstatic.com/steam/apps/433340/header.jpg
 
+
+NSFW
+
+
+Horror
 Five Nights at Freddy's
 kwwsv://udqrc.jj/iloh/G1wXF8F8
-Original
 https://play.google.com/store/apps/details?id=com.scottgames.fivenightsatfreddys&hl=en-US
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/319510/header.jpg?t=1666889251
 
 Five Nights at Freddy's 2
 kwwsv://udqrc.jj/iloh/YsqnVlST
-Original
 https://play.google.com/store/apps/details?id=com.scottgames.fnaf2
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/332800/header.jpg?t=1579635993
 
 Five Nights at Freddy's 3
 kwwsv://udqrc.jj/iloh/ZPKLFaq5
-Original
 https://play.google.com/store/apps/details?id=com.scottgames.fnaf3
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/354140/header.jpg?t=1579635991
 
 Five Nights at Freddy's 4
 kwwsv://udqrc.jj/iloh/stg4bFEq
-Original
 https://play.google.com/store/apps/details?id=com.scottgames.fnaf4
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/388090/header.jpg?t=1579635988
 
 Five Nights at Freddy's: Sister Location
 kwwsv://udqrc.jj/iloh/XV2sUuV9
-Original
 https://play.google.com/store/apps/details?id=com.scottgames.sisterlocation
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/506610/header.jpg?t=1579635985
 
 Freddy Fazbear's Pizzeria Simulator
 kwwsv://udqrc.jj/iloh/209Z6QeJ
-Original
 https://play.google.com/store/apps/details?id=com.clickteam.freddyfazbearspizzeriasimulator
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/738060/header.jpg?t=1512422259
 
 Ultimate Custom Night
 kwwsv://udqrc.jj/iloh/209Z6QeJ
-Original
 https://play.google.com/store/apps/details?id=com.clickteam.ultimatecustomnight
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/871720/header.jpg?t=1568143255
 
 FIVE NIGHTS AT FREDDY'S: HELP WANTED
 kwwsv://udqrc.jj/iloh/nl4qbfmn
-Original
 https://store.steampowered.com/app/732690/FIVE_NIGHTS_AT_FREDDYS_HELP_WANTED/
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/732690/header.jpg?t=1686587846
 
 FNaF: Security Breach Fan Game Mobile V1.7.0.1
 kwwsv://jdphmrow.frp/jdphv/XSV_iqdi-vhfxulwb-euhdfk-preloh-idq-jdph/226375
-Original
 https://store.steampowered.com/app/747660/Five_Nights_at_Freddys_Security_Breach/
-Image
 https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/747660/header.jpg?t=1686587905
----
-AAA
-
---- 
-NSFW
-
----
