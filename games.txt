@@ -29,6 +29,12 @@ Original
 https://store.steampowered.com/app/1657630/Slime_Rancher_2/
 Image
 
+Cuphead
+kwwsv://udqrc.jj/iloh/34oVYDRK
+Original
+https://store.steampowered.com/app/268910/Cuphead/
+Image
+
 ---
 
 Horror
@@ -97,3 +103,8 @@ kwwsv://udqrc.jj/iloh/gv5NVpEL
 Original
 https://store.steampowered.com/app/1968840
 Image
+
+---
+
+AAA
+---
