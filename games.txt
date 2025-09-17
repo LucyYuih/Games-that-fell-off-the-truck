@@ -31,14 +31,26 @@ Image
 
 ---
 
-AAA
----
-
 Horror
 Five Nights at Freddy's
 kwwsv://udqrc.jj/iloh/SODgm7p5
 Original
 https://store.steampowered.com/app/319510/Five_Nights_at_Freddys/
+Image
+
+Five Nights at Freddy's 2
+https://ranoz.gg/file/Rg00SCep
+Original
+https://store.steampowered.com/app/332800/Five_Nights_at_Freddys_2/
+Image
+
+---
+
+Dating Simulator
+Hookah Haze
+kwwsv://udqrc.jj/iloh/7Y9kfv52
+Original
+https://store.steampowered.com/app/2470300/Hookah_Haze/
 Image
 
 ---
@@ -58,11 +70,5 @@ Image
 
 ---
 
-Dating Simulator
-Hookah Haze
-kwwsv://udqrc.jj/iloh/7Y9kfv52
-Original
-https://store.steampowered.com/app/2470300/Hookah_Haze/
-Image
-
+AAA
 ---
