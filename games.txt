@@ -84,7 +84,7 @@ Five Nights at Freddy's: Secret of the Mimic
 kwwsv://udqrc.jj/iloh/6BHHMpvk
 Original
 https://store.steampowered.com/app/2215390/Five_Nights_at_Freddys_Secret_of_the_Mimic/
-Image
+Image: https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2215390/527bbebaa5764de58528487b3f2142c44a58b267/header.jpg?t=1758038461
 
 MiSide
 kwwsv://udqrc.jj/iloh/SbaXadnM
