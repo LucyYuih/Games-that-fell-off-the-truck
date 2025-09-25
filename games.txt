@@ -23,8 +23,8 @@ Original
 https://store.steampowered.com/app/433340/Slime_Rancher/
 Image
 
-Slime Rancher 2
-kwwsv://udqrc.jj/iloh/j6TsEvRo
+Slime Rancher 2 [1.0.0]
+kwwsv://udqrc.jj/iloh/U2V5g6rN
 Original
 https://store.steampowered.com/app/1657630/Slime_Rancher_2/
 Image
@@ -120,6 +120,12 @@ Scarlet Maiden
 kwwsv://udqrc.jj/iloh/gv5NVpEL
 Original
 https://store.steampowered.com/app/1968840
+Image
+
+Succubus Affection
+https://ranoz.gg/file/14gVHPOC
+Original
+https://store.steampowered.com/app/1328890/Succubus_Affection/
 Image
 
 ---
