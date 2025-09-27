@@ -15,7 +15,7 @@ Hollow Knight: Silksong
 kwwsv://udqrc.jj/iloh/2fwZlKkt
 Original
 https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/
-Image: https://cdn.cloudflare.steamstatic.com/steam/apps/367520/header.jpg
+Image: https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/
 
 Geometry Dash
 kwwsv://udqrc.jj/iloh/bR3gBWdC
