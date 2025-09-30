@@ -3,7 +3,9 @@
     "Hollow Knight: Silksong",
     "Hollow Knight",
     "Slime Rancher",
-    "Geometry Dash"
+    "FNaF: Security Breach Fan Game Mobile V1.7.0.1",
+    "Geometry Dash",
+    "FIVE NIGHTS AT FREDDY'S: HELP WANTED"
   ],
   "interval": 4
 }
