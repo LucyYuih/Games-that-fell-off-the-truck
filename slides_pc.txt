@@ -1,12 +1,12 @@
 {
   "items": [
-    "Balatro",
     "Hollow Knight: Silksong",
+    "Little Witch in the Woods",
     "Slime Rancher 2 [1.0.0]",
     "Five Nights at Freddy's: Secret of the Mimic",
     "MiSide",
-    "Little Witch in the Woods",
+    "Balatro",
     "FlipWitch - Forbidden Sex Hex"
   ],
-  "interval": 3
+  "interval": 4
 }
