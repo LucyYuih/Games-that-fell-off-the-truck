@@ -27,8 +27,7 @@ Slime Rancher 2 [1.0.0]
 kwwsv://udqrc.jj/iloh/U2V5g6rN
 Original
 https://store.steampowered.com/app/1657630/Slime_Rancher_2/
-Image
-Extras: Simulation
+Image: Extras: Simulation
 
 Cuphead
 kwwsv://udqrc.jj/iloh/34oVYDRK
@@ -98,6 +97,19 @@ MiSide
 kwwsv://udqrc.jj/iloh/SbaXadnM
 Original
 https://store.steampowered.com/app/2527500/MiSide/
+Image: Extras: Indie
+
+No, I’m not a Human (v1.1.19)
+kwwsv://udqrc.jj/iloh/4rwfuRtr
+Original
+https://store.steampowered.com/app/3180070/No_Im_not_a_Human/
+Image
+Extras: Indie
+
+Garten of Banban 8
+kwwsv://udqrc.jj/iloh/INOE3FvH
+Original
+https://store.steampowered.com/app/2917040/Garten_of_Banban_8_Anti_Devil/
 Image
 Extras: Indie
 
@@ -117,8 +129,7 @@ Geometry Dash
 kwwsv://udqrc.jj/iloh/ZKE52v6v
 Original
 https://store.steampowered.com/app/322170/Geometry_Dash/
-Image
-Extras: Indie
+Image: Extras: Indie
 
 ---
 
@@ -127,8 +138,7 @@ Hookah Haze
 kwwsv://udqrc.jj/iloh/7Y9kfv52
 Original
 https://store.steampowered.com/app/2470300/Hookah_Haze/
-Image
-Extras: Indie
+Image: Extras: Indie
 
 ---
 
