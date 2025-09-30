@@ -28,6 +28,7 @@ kwwsv://udqrc.jj/iloh/U2V5g6rN
 Original
 https://store.steampowered.com/app/1657630/Slime_Rancher_2/
 Image
+Extras: Simulation
 
 Cuphead
 kwwsv://udqrc.jj/iloh/34oVYDRK
@@ -91,12 +92,14 @@ kwwsv://udqrc.jj/iloh/6BHHMpvk
 Original
 https://store.steampowered.com/app/2215390/Five_Nights_at_Freddys_Secret_of_the_Mimic/
 Image: https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/2215390/527bbebaa5764de58528487b3f2142c44a58b267/header.jpg?t=1758038461
+Extras: Indie
 
 MiSide
 kwwsv://udqrc.jj/iloh/SbaXadnM
 Original
 https://store.steampowered.com/app/2527500/MiSide/
 Image
+Extras: Indie
 
 ---
 
@@ -115,6 +118,7 @@ kwwsv://udqrc.jj/iloh/ZKE52v6v
 Original
 https://store.steampowered.com/app/322170/Geometry_Dash/
 Image
+Extras: Indie
 
 ---
 
@@ -124,6 +128,7 @@ kwwsv://udqrc.jj/iloh/7Y9kfv52
 Original
 https://store.steampowered.com/app/2470300/Hookah_Haze/
 Image
+Extras: Indie
 
 ---
 
