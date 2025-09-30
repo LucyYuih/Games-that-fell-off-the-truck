@@ -1,0 +1,11 @@
+{
+  "items": [
+    "Balatro",
+    "Hollow Knight",
+    "Hollow Knight: Silksong",
+    "Geometry Dash",
+    "Slime Rancher",
+    "FNaF: Security Breach Fan Game Mobile V1.7.0.1"
+  ],
+  "interval": 3
+}
