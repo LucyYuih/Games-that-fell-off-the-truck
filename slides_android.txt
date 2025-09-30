@@ -1,0 +1,9 @@
+{
+  "items": [
+    "Hollow Knight: Silksong",
+    "Hollow Knight",
+    "Slime Rancher",
+    "Geometry Dash"
+  ],
+  "interval": 4
+}

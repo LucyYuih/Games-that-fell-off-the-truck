@@ -1,0 +1,12 @@
+{
+  "items": [
+    "Hollow Knight: Silksong",
+    "Slime Rancher 2 [1.0.0]",
+    "Little Witch in the Woods",
+    "Five Nights at Freddy's: Secret of the Mimic",
+    "Balatro",
+    "MiSide",
+    "FlipWitch - Forbidden Sex Hex"
+  ],
+  "interval": 3
+}
