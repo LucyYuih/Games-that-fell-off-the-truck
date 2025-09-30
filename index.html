@@ -595,6 +595,36 @@ header{
   color:var(--muted);
   font-size:13px
 }
+.selected-slides-list {
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(255,255,255,0.01);
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+.selected-slide-item {
+  padding: 8px;
+  margin: 4px 0;
+  background: rgba(255,255,255,0.02);
+  border-radius: 6px;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.selected-slide-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+.selected-slide-item.dragging {
+  opacity: 0.5;
+}
+.selected-slide-item .drag-handle {
+  cursor: grab;
+  padding: 4px;
+}
+.selected-slide-item .drag-handle:active {
+  cursor: grabbing;
+}
 @keyframes spin { 
   from { transform: rotate(0deg); } 
   to { transform: rotate(360deg); } 
@@ -796,6 +826,14 @@ header{
           <button id="saveSlidesBtn" class="btn primary">Save to repo</button>
         </div>
         <div style="margin-left:auto"><span class="small-muted">Save will fail if token doesn't allow write; there will be local fallback</span></div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,0.04);margin:12px 0">
+
+      <!-- Selected slides list with drag and drop -->
+      <div class="selected-slides-list" id="selectedSlidesList">
+        <h4 style="margin:0 0 8px 0;color:#eaf2ff">Selected Slides (drag to reorder)</h4>
+        <div id="selectedSlidesContainer"></div>
       </div>
 
       <hr style="border:0;border-top:1px solid rgba(255,255,255,0.04);margin:12px 0">
@@ -1395,7 +1433,12 @@ function loadGames(device){
       // render depending on current tab
       applyCurrentViewRender();
       // load slides for this device (to show owner slider if needed)
-      loadSlidesForDevice(device);
+      loadSlidesForDevice(device).then(() => {
+        // After slides are loaded, setup the slider immediately
+        if(getActiveTab() === 'all') {
+          setupOwnerSlider();
+        }
+      });
     })
     .catch(e=>{
       document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Error loading list: ${escapeHtml(e.message)}</div>`;
@@ -1411,8 +1454,12 @@ function applyCurrentViewRender(){
     document.getElementById('requestSection').style.display='none';
     // render all sections from cache for current device
     renderAllSections(allItemsByDevice[currentDevice] || []);
-    // show/hide owner slider
-    setupOwnerSlider();
+    // show/hide owner slider - agora sempre mostra se houver slides
+    if(slidesData[currentDevice] && slidesData[currentDevice].items && slidesData[currentDevice].items.length > 0) {
+      setupOwnerSlider();
+    } else {
+      hideOwnerSlider();
+    }
   } else if(active === 'requests'){
     document.getElementById('gridWrap').style.display='none';
     document.getElementById('allSections').style.display='none';
@@ -1495,41 +1542,40 @@ function showLoginError(msg){
 */
 function slidesPathFor(device){ return `slides_${device}.txt`; }
 
-async function loadSlidesForDevice(device){
-  // try to load from repo if token is available; if not, try localStorage
-  const path = slidesPathFor(device);
-  const publicUrl = `https://raw.githubusercontent.com/${REPO}/main/${path}`;
-  try {
-    const res = await fetch(publicUrl + '?cacheBust=' + Date.now());
-    if(res.ok){
-      const content = await res.text();
-      try{
-        const parsed = JSON.parse(content);
-        slidesData[device] = parsed;
-      }catch(e){
-        // if file is plain text (e.g. newline separated titles), convert
-        const arr = content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-        slidesData[device] = { items: arr.slice(0,10), interval: 5 };
-      }
-      return;
-    } else {
-      // fallback to localStorage
-      const local = localStorage.getItem(`slides_${device}`);
-      if(local){
-        slidesData[device] = JSON.parse(local);
-      } else {
-        slidesData[device] = { items: [], interval: 5 };
-      }
-    }
-  } catch(e) {
-    // Em caso de erro, tenta localStorage
-    const local = localStorage.getItem(`slides_${device}`);
-    if(local){
-      slidesData[device] = JSON.parse(local);
-    } else {
-      slidesData[device] = { items: [], interval: 5 };
-    }
-  }
+function loadSlidesForDevice(device){
+  return new Promise((resolve) => {
+    const path = slidesPathFor(device);
+    const publicUrl = `https://raw.githubusercontent.com/${REPO}/main/${path}`;
+    fetch(publicUrl + '?cacheBust=' + Date.now())
+      .then(res => {
+        if(res.ok){
+          return res.text();
+        } else {
+          throw new Error('Not found');
+        }
+      })
+      .then(content => {
+        try{
+          const parsed = JSON.parse(content);
+          slidesData[device] = parsed;
+        }catch(e){
+          // if file is plain text (e.g. newline separated titles), convert
+          const arr = content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+          slidesData[device] = { items: arr.slice(0,10), interval: 5 };
+        }
+        resolve();
+      })
+      .catch(e => {
+        // fallback to localStorage
+        const local = localStorage.getItem(`slides_${device}`);
+        if(local){
+          slidesData[device] = JSON.parse(local);
+        } else {
+          slidesData[device] = { items: [], interval: 5 };
+        }
+        resolve();
+      });
+  });
 }
 
 /* Save slides to repo (PUT contents) — if fails, save locally */
@@ -1730,13 +1776,16 @@ function prevSlide(){
   gotoSlide(prev);
 }
 
-/* ========= Editor modal (owner-only) - FIXED with auto-update on device change ========= */
+/* ========= Editor modal (owner-only) - FIXED with drag and drop reordering ========= */
+let draggedItem = null;
+
 function openEditModal(device){
   // populate checkbox grid with games for that device
   const grid = document.getElementById('editorCheckboxGrid');
   grid.innerHTML = '';
   const games = allItemsByDevice[device] || [];
-  const existing = (slidesData[device] && slidesData[device].items) ? slidesData[device].items.map(x=>x.toLowerCase()) : [];
+  const existing = (slidesData[device] && slidesData[device].items) ? slidesData[device].items : [];
+  
   games.forEach((g, idx)=>{
     const id = `chk_${device}_${idx}`;
     const wrapper = document.createElement('label');
@@ -1748,9 +1797,26 @@ function openEditModal(device){
     wrapper.style.cursor='pointer';
     const cb = document.createElement('input');
     cb.type='checkbox'; cb.id = id; cb.dataset.title = g.title; cb.dataset.index = idx;
-    if(existing.includes(g.title.toLowerCase())) cb.checked = true;
-    cb.onchange = () => {
-      enforceMaxSelection(device);
+    if(existing.includes(g.title)) cb.checked = true;
+    cb.onchange = function() {
+      const device = document.getElementById('editorDeviceSelect').value;
+      const selectedItems = slidesData[device].items;
+      if(this.checked) {
+        // Add to the end of the list
+        if(!selectedItems.includes(this.dataset.title) && selectedItems.length < 10) {
+          selectedItems.push(this.dataset.title);
+        } else if(selectedItems.length >= 10) {
+          this.checked = false;
+          alert('You can only select up to 10 games.');
+        }
+      } else {
+        // Remove from list
+        const index = selectedItems.indexOf(this.dataset.title);
+        if(index > -1) {
+          selectedItems.splice(index, 1);
+        }
+      }
+      renderSelectedSlidesList(device);
       updateSelectedCount(device);
     };
     const title = document.createElement('div');
@@ -1767,9 +1833,10 @@ function openEditModal(device){
     wrapper.appendChild(right);
     grid.appendChild(wrapper);
   });
+  
   // interval
   document.getElementById('editorInterval').value = (slidesData[device] && slidesData[device].interval) ? slidesData[device].interval : 5;
-  updateSelectedCount(device);
+  renderSelectedSlidesList(device);
   document.getElementById('editorDeviceSelect').value = device;
   document.getElementById('editModal').style.display = '';
   document.getElementById('editorSearch').value = '';
@@ -1782,33 +1849,97 @@ function openEditModal(device){
   };
 }
 
+function renderSelectedSlidesList(device) {
+  const container = document.getElementById('selectedSlidesContainer');
+  container.innerHTML = '';
+  
+  const selectedItems = slidesData[device].items || [];
+  
+  selectedItems.forEach((title, index) => {
+    const item = document.createElement('div');
+    item.className = 'selected-slide-item';
+    item.draggable = true;
+    item.dataset.index = index;
+    
+    item.innerHTML = `
+      <div class="drag-handle">≡</div>
+      <span>${index + 1}.</span>
+      <span style="flex:1">${escapeHtml(title)}</span>
+      <button class="btn ghost small remove-btn" data-index="${index}">Remove</button>
+    `;
+    
+    // Drag events
+    item.ondragstart = (e) => {
+      draggedItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', index);
+    };
+    
+    item.ondragend = () => {
+      item.classList.remove('dragging');
+      draggedItem = null;
+    };
+    
+    item.ondragover = (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    };
+    
+    item.ondrop = (e) => {
+      e.preventDefault();
+      if (draggedItem !== item) {
+        const fromIndex = parseInt(draggedItem.dataset.index);
+        const toIndex = parseInt(item.dataset.index);
+        
+        // Reorder the array
+        const items = slidesData[device].items;
+        const [movedItem] = items.splice(fromIndex, 1);
+        items.splice(toIndex, 0, movedItem);
+        
+        // Re-render the list
+        renderSelectedSlidesList(device);
+      }
+    };
+    
+    container.appendChild(item);
+  });
+  
+  // Add event listeners for remove buttons
+  container.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.onclick = function() {
+      const index = parseInt(this.dataset.index);
+      const device = document.getElementById('editorDeviceSelect').value;
+      slidesData[device].items.splice(index, 1);
+      renderSelectedSlidesList(device);
+      updateSelectedCount(device);
+      
+      // Also uncheck the checkbox in the main list
+      const checkboxes = document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`);
+      checkboxes.forEach(cb => {
+        if (cb.dataset.title === title) {
+          cb.checked = false;
+        }
+      });
+    };
+  });
+  
+  updateSelectedCount(device);
+}
+
 function closeEditModal(){
   document.getElementById('editModal').style.display = 'none';
 }
 
 function updateSelectedCount(device){
-  const checks = Array.from(document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`));
-  const selected = checks.filter(c=>c.checked).length;
+  const selected = (slidesData[device] && slidesData[device].items) ? slidesData[device].items.length : 0;
   document.getElementById('selectedCount').textContent = `Selected: ${selected}/10`;
-}
-
-function enforceMaxSelection(device){
-  const checks = Array.from(document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`));
-  const selected = checks.filter(c=>c.checked);
-  if(selected.length > 10){
-    // uncheck the last one
-    const last = selected[selected.length - 1];
-    last.checked = false;
-    alert('You can only select up to 10 games.');
-  }
 }
 
 async function saveSlidesFromEditor(){
   const device = document.getElementById('editorDeviceSelect').value;
   const interval = parseInt(document.getElementById('editorInterval').value) || 5;
-  const checks = Array.from(document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`));
-  const selectedTitles = checks.filter(c=>c.checked).map(c=>c.dataset.title).slice(0,10);
-  const data = { items: selectedTitles, interval };
+  const data = { items: slidesData[device].items, interval };
   const ok = await persistSlides(device, data);
   if(ok){
     // reaplicar e fechar modal
@@ -2022,14 +2153,13 @@ document.addEventListener('DOMContentLoaded', ()=> {
   document.getElementById('openRequestsTab').addEventListener('click', () => loadRequests(null,'open'));
   document.getElementById('closedRequestsTab').addEventListener('click', () => loadRequests(null,'closed'));
 
-  // editor modal - FIXED: Now properly opens the modal and updates when device changes
+  // editor modal
   document.getElementById('openEditorBtn').addEventListener('click', () => {
     if(!isOwnerLoggedIn()){ alert('Only the owner can edit'); return; }
     document.getElementById('editorDeviceSelect').value = currentDevice;
     openEditModal(currentDevice);
   });
   
-  // FIXED: Add event listener for device change in editor
   document.getElementById('editorDeviceSelect').addEventListener('change', function() {
     const device = this.value;
     openEditModal(device);
@@ -2040,23 +2170,20 @@ document.addEventListener('DOMContentLoaded', ()=> {
   document.getElementById('clearSlidesBtn').addEventListener('click', async ()=>{
     const dev = document.getElementById('editorDeviceSelect').value;
     if(!confirm('Clear selection for ' + dev + '?')) return;
-    slidesData[dev] = { items: [], interval: 5 };
-    await persistSlides(dev, slidesData[dev]);
-    openEditModal(dev);
+    slidesData[dev].items = [];
+    // Desmarcar todos os checkboxes
+    const checkboxes = document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`);
+    checkboxes.forEach(cb => cb.checked = false);
+    renderSelectedSlidesList(dev);
   });
   document.getElementById('saveLocalBtn').addEventListener('click', async ()=>{
     const dev = document.getElementById('editorDeviceSelect').value;
     const interval = parseInt(document.getElementById('editorInterval').value) || 5;
-    const checks = Array.from(document.querySelectorAll(`#editorCheckboxGrid input[type=checkbox]`));
-    const selectedTitles = checks.filter(c=>c.checked).map(c=>c.dataset.title).slice(0,10);
-    const data = { items: selectedTitles, interval };
+    const data = { items: slidesData[dev].items, interval };
     localStorage.setItem(`slides_${dev}`, JSON.stringify(data));
     slidesData[dev] = data;
     alert('Saved locally.');
   });
-
-  // FIXED: Slider arrow buttons now work properly
-  // These event listeners are now set up in setupOwnerSlider() to avoid duplicate handlers
 
   // load saved token/user
   const savedToken = localStorage.getItem('github_token');
