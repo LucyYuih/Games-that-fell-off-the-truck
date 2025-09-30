@@ -1,9 +1,9 @@
 {
   "items": [
-    "Hollow Knight",
     "Hollow Knight: Silksong",
-    "Geometry Dash",
-    "Slime Rancher"
+    "Hollow Knight",
+    "Slime Rancher",
+    "Geometry Dash"
   ],
   "interval": 3
 }
