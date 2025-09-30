@@ -998,7 +998,7 @@ function parseBlock(blockLines, currentCategory){
       continue;
     }
     if(ln.toLowerCase() === 'original'){ gotOriginal = true; continue; }
-    const tagMatch = ln.match(/^(filters?|filtros|tags?)\s*[:\-]\s*(.+)$/i);
+    const tagMatch = ln.match(/^(filters?|filtros|tags?|Extras)\s*[:\-]\s*(.+)$/i);
     if(tagMatch){
       const local = tagMatch[2].split(',').map(x=>x.trim()).filter(Boolean);
       for(const t of local) if(!tags.includes(t)) tags.push(t);
@@ -1395,9 +1395,7 @@ function loadGames(device){
       // render depending on current tab
       applyCurrentViewRender();
       // load slides for this device (to show owner slider if needed)
-      if(isOwnerLoggedIn()) {
-        loadSlidesForDevice(device);
-      }
+      loadSlidesForDevice(device);
     })
     .catch(e=>{
       document.getElementById('grid').innerHTML = `<div style="color:#e74c3c;padding:20px;">Error loading list: ${escapeHtml(e.message)}</div>`;
@@ -1414,11 +1412,7 @@ function applyCurrentViewRender(){
     // render all sections from cache for current device
     renderAllSections(allItemsByDevice[currentDevice] || []);
     // show/hide owner slider
-    if(isOwnerLoggedIn()){
-      setupOwnerSlider();
-    } else {
-      hideOwnerSlider();
-    }
+    setupOwnerSlider();
   } else if(active === 'requests'){
     document.getElementById('gridWrap').style.display='none';
     document.getElementById('allSections').style.display='none';
@@ -1504,32 +1498,22 @@ function slidesPathFor(device){ return `slides_${device}.txt`; }
 async function loadSlidesForDevice(device){
   // try to load from repo if token is available; if not, try localStorage
   const path = slidesPathFor(device);
-  if(githubToken){
-    try{
-      const url = `https://api.github.com/repos/${REPO}/contents/${encodeURIComponent(path)}?t=${Date.now()}`;
-      const res = await fetch(url, { headers: { Authorization: 'token ' + githubToken } });
-      if(res.ok){
-        const json = await res.json();
-        const content = atob(json.content.replace(/\n/g,''));
-        try{
-          const parsed = JSON.parse(content);
-          slidesData[device] = parsed;
-        }catch(e){
-          // if file is plain text (e.g. newline separated titles), convert
-          const arr = content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-          slidesData[device] = { items: arr.slice(0,10), interval: 5 };
-        }
-        return;
-      } else {
-        // fallback to localStorage
-        const local = localStorage.getItem(`slides_${device}`);
-        if(local){
-          slidesData[device] = JSON.parse(local);
-        } else {
-          slidesData[device] = { items: [], interval: 5 };
-        }
+  const publicUrl = `https://raw.githubusercontent.com/${REPO}/main/${path}`;
+  try {
+    const res = await fetch(publicUrl + '?cacheBust=' + Date.now());
+    if(res.ok){
+      const content = await res.text();
+      try{
+        const parsed = JSON.parse(content);
+        slidesData[device] = parsed;
+      }catch(e){
+        // if file is plain text (e.g. newline separated titles), convert
+        const arr = content.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        slidesData[device] = { items: arr.slice(0,10), interval: 5 };
       }
-    }catch(e){
+      return;
+    } else {
+      // fallback to localStorage
       const local = localStorage.getItem(`slides_${device}`);
       if(local){
         slidesData[device] = JSON.parse(local);
@@ -1537,8 +1521,8 @@ async function loadSlidesForDevice(device){
         slidesData[device] = { items: [], interval: 5 };
       }
     }
-  } else {
-    // no token, use localStorage
+  } catch(e) {
+    // Em caso de erro, tenta localStorage
     const local = localStorage.getItem(`slides_${device}`);
     if(local){
       slidesData[device] = JSON.parse(local);
@@ -1682,21 +1666,17 @@ function setupOwnerSlider(){
   const nextBtn = document.getElementById('nextSlideBtn');
   
   // Remove existing event listeners to avoid duplicates
-  prevBtn.replaceWith(prevBtn.cloneNode(true));
-  nextBtn.replaceWith(nextBtn.cloneNode(true));
-  
-  // Get the new elements
-  const newPrevBtn = document.getElementById('prevSlideBtn');
-  const newNextBtn = document.getElementById('nextSlideBtn');
+  prevBtn.onclick = null;
+  nextBtn.onclick = null;
   
   // Add event listeners with proper functionality
-  newPrevBtn.onclick = function() { 
+  prevBtn.onclick = function() { 
     stopSliderTimer(); 
     prevSlide(); 
     startSliderTimer((slidesData[currentDevice]||{interval:5}).interval); 
   };
   
-  newNextBtn.onclick = function() { 
+  nextBtn.onclick = function() { 
     stopSliderTimer(); 
     nextSlide(); 
     startSliderTimer((slidesData[currentDevice]||{interval:5}).interval); 
@@ -1833,7 +1813,7 @@ async function saveSlidesFromEditor(){
   if(ok){
     // reaplicar e fechar modal
     await loadSlidesForDevice(device);
-    if(getActiveTab() === 'all' && isOwnerLoggedIn()){
+    if(getActiveTab() === 'all'){
       setupOwnerSlider();
     }
   }
