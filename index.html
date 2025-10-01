@@ -12,13 +12,13 @@
   --glass: rgba(255,255,255,0.03);
   --radius:14px;
   --gap:18px;
-  --cols: 4; /* Alterado de 5 para 4 */
-  --card-scale: 1.1; /* Aumentado de 1 para 1.1 */
-  --title-size: calc(16px * var(--card-scale)); /* Aumentado de 15px para 16px */
-  --meta-size: calc(13px * var(--card-scale)); /* Aumentado de 12px para 13px */
-  --btn-font: calc(14px * var(--card-scale)); /* Aumentado de 13px para 14px */
-  --btn-padding-vert: calc(9px * var(--card-scale)); /* Aumentado de 8px para 9px */
-  --btn-padding-horiz: calc(12px * var(--card-scale)); /* Aumentado de 10px para 12px */
+  --cols: 5;
+  --card-scale: 1;
+  --title-size: calc(15px * var(--card-scale));
+  --meta-size: calc(12px * var(--card-scale));
+  --btn-font: calc(13px * var(--card-scale));
+  --btn-padding-vert: calc(8px * var(--card-scale));
+  --btn-padding-horiz: calc(10px * var(--card-scale));
   --thumb-aspect: 16 / 9;
 }
 *{box-sizing:border-box}
@@ -196,19 +196,22 @@ header{
 }
 .dynamic-filters { 
   display:flex; 
-  gap:8px; 
+  gap:12px; /* Aumentado de 8px para 12px */
   align-items:center; 
   margin-left: 8px; 
   flex-wrap:wrap; 
 }
 .filter-btn { 
-  padding: 6px 12px; 
+  padding: 8px 14px; /* Aumentado de 6px 12px */
   border-radius: 999px; 
   background: rgba(255,255,255,0.03); 
   border: 1px solid rgba(255,255,255,0.04); 
   color: var(--muted); 
   cursor: pointer; 
   font-weight:700;
+  font-size: 13px;
+  white-space: nowrap; /* Impede quebra de linha */
+  min-width: fit-content; /* Garante que o botão tenha largura mínima adequada */
 }
 .filter-btn.active { 
   background: linear-gradient(90deg,#4bb6ff,#7c5cf7); 
@@ -474,10 +477,11 @@ header{
   gap:8px;
   align-items:center
 }
+/* MODIFICADO: 4 colunas fixas na aba All para desktop */
 .cat-grid{
   display:grid;
   gap:14px;
-  grid-template-columns:repeat(5,1fr)
+  grid-template-columns:repeat(4,1fr)
 }
 .cat-pagination{
   display:flex;
@@ -641,11 +645,12 @@ header{
   }
   
   .grid {
-    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
+    grid-template-columns: repeat(4, 1fr);
   }
   
+  /* MODIFICADO: 3 colunas em tablets para aba All */
   .cat-grid {
-    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
+    grid-template-columns: repeat(3, 1fr);
   }
   
   .slider {
@@ -668,16 +673,13 @@ header{
 /* Mobile */
 @media (max-width: 768px) {
   .app {
-    padding: 6px;
-    max-width: 100%;
-    overflow-x: hidden;
+    padding: 10px;
   }
   
   header {
     flex-direction: column;
     align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 12px;
   }
   
   .controls {
@@ -686,121 +688,101 @@ header{
   }
   
   .search {
-    min-width: 120px;
+    min-width: 140px;
     flex: 1;
-    padding: 8px 10px;
-  }
-  
-  .search input {
-    font-size: 12px;
   }
   
   .sort-wrap {
     margin-left: 4px;
   }
   
-  .sort-select {
-    padding: 6px;
-    font-size: 12px;
-  }
-  
   .device-filters {
     width: 100%;
     justify-content: center;
-    margin-bottom: 8px;
+    gap: 10px; /* Aumentado para melhor espaçamento */
   }
   
   .dynamic-filters {
     width: 100%;
     justify-content: center;
     margin-left: 0;
-    margin-top: 6px;
+    margin-top: 8px;
+    gap: 10px; /* Aumentado para melhor espaçamento */
   }
   
   .tabs {
     overflow-x: auto;
-    padding-bottom: 4px;
-    margin-bottom: 8px;
+    padding-bottom: 8px;
     -webkit-overflow-scrolling: touch;
   }
   
   .tab-group {
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
     -webkit-overflow-scrolling: touch;
   }
   
-  .tab {
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-  
   .grid {
-    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
   }
   
+  /* MODIFICADO: 2 colunas em mobile para aba All */
   .cat-grid {
-    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
   }
   
   .slider {
-    height: 140px;
-    margin-bottom: 12px;
+    height: 180px;
   }
   
   .slide {
-    padding: 10px;
+    padding: 16px;
   }
   
   .slide .thumb {
-    flex: 0 0 35%;
+    flex: 0 0 40%;
   }
   
   .slide .info div:first-child {
-    font-size: 12px;
-    margin-bottom: 3px;
+    font-size: 16px;
+    margin-bottom: 6px;
   }
   
   .slider-controls {
-    right: 8px;
-    top: 8px;
+    right: 10px;
+    top: 10px;
   }
   
   .slider-controls .btn.small {
-    padding: 2px 4px;
-    font-size: 8px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
   
   .card {
-    padding: 4px;
-    border-radius: 8px;
+    padding: 10px;
   }
   
   .card .title {
-    font-size: 9px;
-    line-height: 1.1;
+    font-size: 13px;
+    line-height: 1.2;
   }
   
   .card .meta {
-    font-size: 7px;
+    font-size: 11px;
     margin-top: -1px;
   }
   
   .card .btn {
-    padding: 2px 3px;
-    font-size: 7px;
-    min-height: 18px;
-    border-radius: 6px;
-  }
-  
-  .thumb {
-    border-radius: 6px;
-    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 28px;
   }
   
   .request-form {
-    padding: 10px;
+    padding: 15px;
   }
   
   .requests-grid {
@@ -808,97 +790,96 @@ header{
   }
   
   .options-menu {
-    right: -15px;
-    min-width: 120px;
-    padding: 8px;
+    right: -20px;
+    min-width: 140px;
   }
   
   .options-menu input[type=range] {
-    width: 80px;
-  }
-  
-  .cols-count {
-    font-size: 11px;
-    padding: 4px 6px;
-    min-width: 30px;
+    width: 100px;
   }
   
   :root {
-    --card-scale: 0.45;
-    --gap: 4px;
-    --radius: 8px;
+    --card-scale: 0.85;
+    --gap: 10px;
   }
 }
 
 /* Small Mobile */
 @media (max-width: 480px) {
   .app {
-    padding: 4px;
+    padding: 8px;
   }
   
   .brand {
     flex-direction: row;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
   
   .square {
-    width: 32px;
-    height: 32px;
-    font-size: 12px;
-    border-radius: 6px;
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
   }
   
   .titleWrap h1 {
-    font-size: 12px;
+    font-size: 16px;
   }
   
   .titleWrap .lead {
-    font-size: 9px;
+    font-size: 12px;
   }
   
   .controls {
     flex-direction: row;
     width: 100%;
-    gap: 4px;
+    gap: 8px;
   }
   
   .search {
     max-width: 100%;
-    padding: 6px 8px;
+    padding: 8px 10px;
   }
   
   .search input {
-    font-size: 11px;
+    font-size: 12px;
   }
   
   .device-filters {
     flex-wrap: wrap;
+    gap: 8px; /* Aumentado para melhor espaçamento */
   }
   
   .device-btn, .filter-btn {
-    padding: 4px 8px;
-    font-size: 10px;
+    padding: 8px 12px; /* Aumentado de 6px 12px */
+    font-size: 12px;
+  }
+  
+  .dynamic-filters {
+    gap: 8px; /* Aumentado para melhor espaçamento */
   }
   
   .grid {
-    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
   }
   
+  /* MODIFICADO: 2 colunas em small mobile para aba All */
   .cat-grid {
-    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
   }
   
   .slider {
-    height: 120px;
+    height: 150px;
   }
   
   .slide {
-    padding: 8px;
+    padding: 12px;
   }
   
   .slide .thumb {
-    flex: 0 0 30%;
+    flex: 0 0 35%;
   }
   
   .slide .info {
@@ -906,44 +887,40 @@ header{
   }
   
   .slide .info div:first-child {
-    font-size: 10px;
-    margin-bottom: 2px;
+    font-size: 14px;
+    margin-bottom: 4px;
   }
   
   .slide .info .btn {
-    padding: 2px 3px;
-    font-size: 7px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
   
   .slider-controls .btn.small {
-    padding: 1px 3px;
-    font-size: 7px;
+    padding: 3px 5px;
+    font-size: 9px;
   }
   
   .card {
-    padding: 3px;
+    padding: 8px;
   }
   
   .card .title {
-    font-size: 8px;
+    font-size: 12px;
   }
   
   .card .meta {
-    font-size: 6px;
+    font-size: 10px;
   }
   
   .card .btn {
-    padding: 1px 2px;
-    font-size: 6px;
-    min-height: 16px;
-  }
-  
-  .thumb {
-    min-height: 35px;
+    padding: 5px 6px;
+    font-size: 10px;
+    min-height: 26px;
   }
   
   .edit-panel {
-    padding: 8px;
+    padding: 12px;
   }
   
   .checkbox-grid {
@@ -953,93 +930,87 @@ header{
   .header-owner {
     flex-direction: row;
     width: 100%;
-    gap: 6px;
+    gap: 8px;
   }
   
   .header-owner .btn {
     width: auto;
     justify-content: center;
-    font-size: 10px;
-    padding: 4px 6px;
-  }
-  
-  .owner-badge {
-    font-size: 10px;
-    padding: 4px 8px;
+    font-size: 11px;
+    padding: 6px 8px;
   }
   
   :root {
-    --card-scale: 0.4;
-    --gap: 3px;
+    --card-scale: 0.8;
+    --gap: 8px;
   }
 }
 
 /* Extra small screens */
 @media (max-width: 360px) {
   .app {
-    padding: 3px;
+    padding: 6px;
   }
   
   .tab {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  
+  /* MODIFICADO: 2 colunas em extra small para aba All */
+  .cat-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  
+  .card {
+    padding: 6px;
+  }
+  
+  .card .title {
+    font-size: 11px;
+  }
+  
+  .card .meta {
+    font-size: 9px;
+  }
+  
+  .slider {
+    height: 130px;
+  }
+  
+  .slide .info div:first-child {
+    font-size: 12px;
+  }
+  
+  .btn {
     padding: 4px 6px;
     font-size: 9px;
   }
   
-  .grid {
-    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
-  }
-  
-  .cat-grid {
-    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
-  }
-  
-  .card {
-    padding: 2px;
-  }
-  
-  .card .title {
-    font-size: 7px;
-  }
-  
-  .card .meta {
-    font-size: 5px;
-  }
-  
-  .slider {
-    height: 100px;
-  }
-  
-  .slide .info div:first-child {
-    font-size: 9px;
-  }
-  
-  .btn {
-    padding: 1px 2px;
-    font-size: 6px;
-  }
-  
-  .thumb {
-    min-height: 30px;
-  }
-  
   :root {
-    --gap: 2px;
-    --card-scale: 0.35;
+    --gap: 6px;
+    --card-scale: 0.75;
   }
 }
 
 /* Orientation specific */
 @media (max-width: 768px) and (orientation: landscape) {
   .slider {
-    height: 120px;
+    height: 160px;
   }
   
   .slide .thumb {
-    flex: 0 0 30%;
+    flex: 0 0 35%;
   }
   
   .slide .info {
-    flex: 1 1 70%;
+    flex: 1 1 65%;
   }
 }
 
@@ -1081,12 +1052,12 @@ body {
 /* Improve touch targets on mobile */
 @media (max-width: 768px) {
   .btn, .tab, .device-btn, .filter-btn {
-    min-height: 28px;
-    min-width: 28px;
+    min-height: 36px;
+    min-width: 36px;
   }
   
   .card .btn {
-    min-height: 18px;
+    min-height: 26px;
   }
 }
 
@@ -1097,62 +1068,71 @@ body {
 
 /* Improve slider dot visibility on mobile */
 .slider-dots .dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
 }
 
 /* Adjust category sections for mobile */
 @media (max-width: 768px) {
   .section-category {
-    padding: 10px;
-    margin-bottom: 16px;
+    padding: 12px;
+    margin-bottom: 20px;
   }
   
   .section-title {
-    font-size: 14px;
+    font-size: 16px;
   }
   
   .cat-pagination {
-    margin-top: 6px;
+    margin-top: 8px;
   }
   
   .cat-pagination .btn.small {
-    padding: 3px 4px;
-    font-size: 9px;
+    padding: 4px 6px;
+    font-size: 10px;
   }
 }
 
-/* Force 5 columns on mobile by reducing everything */
-@media (max-width: 768px) {
-  .app {
-    min-width: 320px;
+/* MODIFICAÇÃO: Aumentar ligeiramente o tamanho dos cards na aba All */
+.cat-grid .card {
+  padding: 14px; /* Aumentado de 12px */
+  gap: 12px; /* Aumentado de 10px */
+}
+
+.cat-grid .card .title {
+  font-size: 16px; /* Aumentado de 15px */
+}
+
+.cat-grid .card .meta {
+  font-size: 13px; /* Aumentado de 12px */
+}
+
+.cat-grid .card .btn {
+  padding: 10px 12px; /* Aumentado de 8px 10px */
+  font-size: 14px; /* Aumentado de 13px */
+}
+
+/* CORREÇÃO: Melhorar espaçamento dos botões de filtro em telas pequenas */
+@media (max-width: 480px) {
+  .dynamic-filters {
+    justify-content: flex-start;
   }
   
-  .grid, .cat-grid {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+  .filter-btn {
+    flex: 0 0 auto; /* Impede que os botões cresçam demais */
+    margin-bottom: 4px; /* Adiciona espaçamento entre linhas */
+  }
+}
+
+/* CORREÇÃO: Ajustar o layout da área de filtros para telas muito pequenas */
+@media (max-width: 360px) {
+  .device-filters, .dynamic-filters {
+    gap: 6px;
   }
   
-  /* Ensure cards don't overflow */
-  .card {
-    min-width: 0;
-    overflow: hidden;
-  }
-  
-  .card .title,
-  .card .meta {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  
-  .card .buttons {
-    min-width: 0;
-  }
-  
-  .card .btn {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .device-btn, .filter-btn {
+    padding: 6px 10px;
+    font-size: 11px;
   }
 }
 </style>
@@ -1781,7 +1761,7 @@ function renderGrid(items){
   filterAndShowGrid();
 }
 
-/* Render when "All" — creates sections by category; each section has its pagination (10 per page, 5 columns x 2 rows) */
+/* Render when "All" — creates sections by category; each section has its pagination (8 per page, 4 columns x 2 rows) */
 function renderAllSections(allItems){
   const wrapper=document.getElementById('allSections');
   wrapper.innerHTML='';
@@ -1810,7 +1790,8 @@ function renderAllSections(allItems){
     // grid container for pages (we will hold pages as children, only one visible)
     const pagesWrapper = document.createElement('div');
     pagesWrapper.className = 'pages-wrapper';
-    const perPage = 10;
+    // MODIFICADO: de 10 para 8 itens por página
+    const perPage = 8;
     const pageCount = Math.max(1, Math.ceil(items.length / perPage));
     for(let p=0;p<pageCount;p++){
       const page = document.createElement('div');
@@ -1865,7 +1846,7 @@ function renderAllSections(allItems){
 
 /* Apply column variable only on grid mode (when tab != all)
    The user wanted columns options to affect only when filter/tab específico está selecionado — implementamos: 
-   - If active tab is 'all', ignore cols and force 5 columns for category blocks (done in CSS)
+   - If active tab is 'all', ignore cols and force 4 columns for category blocks (done in CSS)
    - Otherwise apply --cols
 */
 function applyColumns(cols){
@@ -1874,7 +1855,7 @@ function applyColumns(cols){
   const activeTab = getActiveTab().toLowerCase();
   if(activeTab === 'all'){
     // don't change : keep default --cols for grid but All uses its own layout
-    document.documentElement.style.setProperty('--cols', 5);
+    document.documentElement.style.setProperty('--cols', 4); // MODIFICADO: de 5 para 4
   } else {
     document.documentElement.style.setProperty('--cols', cols);
     localStorage.setItem('gridColumns', cols);
@@ -2624,10 +2605,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
       applyColumns(e.target.value);
       colsCount.textContent = e.target.value;
     });
-const savedCols = parseInt(localStorage.getItem('gridColumns') || 4, 10); // Alterado de 5 para 4
-zoomSlider.value = Math.min(8, Math.max(1, savedCols));
-colsCount.textContent = zoomSlider.value;
-applyColumns(zoomSlider.value);
+    const savedCols = parseInt(localStorage.getItem('gridColumns') || getComputedStyle(document.documentElement).getPropertyValue('--cols') || 4, 10); // MODIFICADO: de 5 para 4
+    zoomSlider.value = Math.min(8, Math.max(1, savedCols));
+    colsCount.textContent = zoomSlider.value;
+    applyColumns(zoomSlider.value);
   }
   const optionsBtn = document.getElementById('optionsBtn');
   const optionsMenu = document.getElementById('optionsMenu');
