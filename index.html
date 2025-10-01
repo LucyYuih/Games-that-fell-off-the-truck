@@ -12,13 +12,13 @@
   --glass: rgba(255,255,255,0.03);
   --radius:14px;
   --gap:18px;
-  --cols: 5;
-  --card-scale: 1;
-  --title-size: calc(15px * var(--card-scale));
-  --meta-size: calc(12px * var(--card-scale));
-  --btn-font: calc(13px * var(--card-scale));
-  --btn-padding-vert: calc(8px * var(--card-scale));
-  --btn-padding-horiz: calc(10px * var(--card-scale));
+  --cols: 4; /* Alterado de 5 para 4 */
+  --card-scale: 1.1; /* Aumentado de 1 para 1.1 */
+  --title-size: calc(16px * var(--card-scale)); /* Aumentado de 15px para 16px */
+  --meta-size: calc(13px * var(--card-scale)); /* Aumentado de 12px para 13px */
+  --btn-font: calc(14px * var(--card-scale)); /* Aumentado de 13px para 14px */
+  --btn-padding-vert: calc(9px * var(--card-scale)); /* Aumentado de 8px para 9px */
+  --btn-padding-horiz: calc(12px * var(--card-scale)); /* Aumentado de 10px para 12px */
   --thumb-aspect: 16 / 9;
 }
 *{box-sizing:border-box}
@@ -641,11 +641,11 @@ header{
   }
   
   .grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
   }
   
   .cat-grid {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
   }
   
   .slider {
@@ -737,13 +737,11 @@ header{
   }
   
   .grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
   }
   
   .cat-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 4px;
+    grid-template-columns: repeat(3, 1fr); /* Alterado de 4 para 3 */
   }
   
   .slider {
@@ -884,13 +882,11 @@ header{
   }
   
   .grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
+    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
   }
   
   .cat-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 3px;
+    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
   }
   
   .slider {
@@ -990,13 +986,11 @@ header{
   }
   
   .grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 2px;
+    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
   }
   
   .cat-grid {
-    grid-template-columns: repeat(5, 1fr);
-    gap: 2px;
+    grid-template-columns: repeat(2, 1fr); /* Alterado de 4 para 2 */
   }
   
   .card {
@@ -2630,10 +2624,10 @@ document.addEventListener('DOMContentLoaded', ()=> {
       applyColumns(e.target.value);
       colsCount.textContent = e.target.value;
     });
-    const savedCols = parseInt(localStorage.getItem('gridColumns') || getComputedStyle(document.documentElement).getPropertyValue('--cols') || 5, 10);
-    zoomSlider.value = Math.min(8, Math.max(1, savedCols));
-    colsCount.textContent = zoomSlider.value;
-    applyColumns(zoomSlider.value);
+const savedCols = parseInt(localStorage.getItem('gridColumns') || 4, 10); // Alterado de 5 para 4
+zoomSlider.value = Math.min(8, Math.max(1, savedCols));
+colsCount.textContent = zoomSlider.value;
+applyColumns(zoomSlider.value);
   }
   const optionsBtn = document.getElementById('optionsBtn');
   const optionsMenu = document.getElementById('optionsMenu');
