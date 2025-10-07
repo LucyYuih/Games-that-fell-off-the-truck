@@ -1,6 +1,6 @@
 {
   "items": [
-    "Hollow Knight: Silksong",
+    "Hollow Knight: Silksong [1.1.0]",
     "Hollow Knight",
     "Slime Rancher",
     "FNaF: Security Breach Fan Game Mobile V1.7.0.1",
