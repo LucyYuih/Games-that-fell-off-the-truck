@@ -1,42 +1,42 @@
 Indie
 Balatro
-kwwsv://udqrc.jj/iloh/XCeqfexm
+kwwsv://vw0.udqrc.jj/XCeqfexm-Edodwur-DqnhuJdphv.udu
 Original
 https://store.steampowered.com/app/2379780/Balatro/id=com.playstack.balatro.android
 Image: https://images.igdb.com/igdb/image/upload/t_cover_big/co9g3x.webp
 
 Hollow Knight
-kwwsv://udqrc.jj/iloh/T2hzMpDR
+kwwsv://vw0.udqrc.jj/T2hzMpDR-Kroorz-Nqljkw.udu
 Original
 https://store.steampowered.com/app/367520/Hollow_Knight/
 Image
 
 Hollow Knight: Silksong
-kwwsv://udqrc.jj/iloh/yexfmJju
+kwwsv://vw0.udqrc.jj/yexfmJju-Kroorz-Nqljkw-Vlonvrqj.udu
 Original
 https://store.steampowered.com/app/1030300/Hollow_Knight_Silksong/
 Image
 
 Slime Rancher
-kwwsv://udqrc.jj/iloh/KrcIvhxC
+kwwsv://vw0.udqrc.jj/KrcIvhxC-Volph-Udqfkhu-DqnhuJdphv.udu
 Original
 https://store.steampowered.com/app/433340/Slime_Rancher/
 Image
 
 Slime Rancher 2 [1.0.0]
-kwwsv://udqrc.jj/iloh/U2V5g6rN
+kwwsv://vw0.udqrc.jj/U2V5g6rN-Volph-Udqfkhu-5-DqnhuJdphv.udu
 Original
 https://store.steampowered.com/app/1657630/Slime_Rancher_2/
 Image: Extras: Simulation
 
 Cuphead
-kwwsv://udqrc.jj/iloh/34oVYDRK
+kwwsv://vw0.udqrc.jj/34oVYDRK-Fxskhdg-DqnhuJdphv.udu
 Original
 https://store.steampowered.com/app/268910/Cuphead/
 Image
 
 To The Core
-kwwsv://udqrc.jj/iloh/diVnP7lI
+kwwsv://vw0.udqrc.jj/diVnP7lI-Wr%53Wkh%53Fruh.cls
 Original
 https://store.steampowered.com/app/1988550/To_The_Core/
 Image
@@ -48,22 +48,19 @@ No, I’m not a Human (v1.1.19)
 kwwsv://udqrc.jj/iloh/4rwfuRtr
 Original
 https://store.steampowered.com/app/3180070/No_Im_not_a_Human/
-Image: 
-Extras: Indie
+Image: Extras: Indie
 
 MiSide
 kwwsv://udqrc.jj/iloh/SbaXadnM
 Original
 https://store.steampowered.com/app/2527500/MiSide/
-Image: 
-Extras: Indie
+Image: Extras: Indie
 
 Garten of Banban 8
 kwwsv://udqrc.jj/iloh/INOE3FvH
 Original
 https://store.steampowered.com/app/2917040/Garten_of_Banban_8_Anti_Devil/
-Image: 
-Extras: Indie
+Image: Extras: Indie
 
 Five Nights at Freddy's
 kwwsv://udqrc.jj/iloh/SODgm7p5
