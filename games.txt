@@ -48,20 +48,21 @@ No, I’m not a Human (v1.1.19)
 kwwsv://udqrc.jj/iloh/4rwfuRtr
 Original
 https://store.steampowered.com/app/3180070/No_Im_not_a_Human/
-Image
+Image: 
 Extras: Indie
 
 MiSide
 kwwsv://udqrc.jj/iloh/SbaXadnM
 Original
 https://store.steampowered.com/app/2527500/MiSide/
-Image: Extras: Indie
+Image: 
+Extras: Indie
 
 Garten of Banban 8
 kwwsv://udqrc.jj/iloh/INOE3FvH
 Original
 https://store.steampowered.com/app/2917040/Garten_of_Banban_8_Anti_Devil/
-Image
+Image: 
 Extras: Indie
 
 Five Nights at Freddy's
@@ -139,6 +140,15 @@ kwwsv://udqrc.jj/iloh/7Y9kfv52
 Original
 https://store.steampowered.com/app/2470300/Hookah_Haze/
 Image: Extras: Indie
+
+---
+
+ALT Dwnld
+UMIGARI | ウミガリ Demo
+kwwsv://udqrc.jj/iloh/T4vIemf7
+Original
+https://store.steampowered.com/app/3969060/UMIGARI___Demo/
+Image
 
 ---
 
